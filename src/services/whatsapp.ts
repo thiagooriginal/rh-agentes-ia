@@ -20,6 +20,7 @@ export class WhatsAppService {
   };
   private isConnecting: boolean = false;
   private hasPrintedTerminalQR: boolean = false;
+  private recentBotReplies: Set<string> = new Set();
 
   public getStatus(): WhatsAppState {
     return { ...this.state };
@@ -81,7 +82,8 @@ export class WhatsAppService {
         if (connection === 'open') {
           const userPhone = this.sock?.user?.id?.split(':')[0] || 'Desconhecido';
           console.log(`\n✅ WhatsApp conectado com sucesso!`);
-          console.log(`📞 Linha do Salão: ${userPhone}\n`);
+          console.log(`📞 Linha do Salão: ${userPhone}`);
+          console.log(`🔒 Modo de Segurança Ativo: Respondendo APENAS ao seu próprio número. Grupos desativados.\n`);
 
           this.state = {
             state: 'connected',
@@ -90,6 +92,7 @@ export class WhatsAppService {
             lastUpdated: new Date().toISOString()
           };
           this.isConnecting = false;
+          this.hasPrintedTerminalQR = false;
         }
 
         if (connection === 'close') {
@@ -111,59 +114,107 @@ export class WhatsAppService {
         }
       });
 
-      // Trata mensagens recebidas
+      // Trata mensagens recebidas com filtro estrito de segurança
       this.sock.ev.on('messages.upsert', async (m) => {
         if (m.type !== 'notify') return;
 
         for (const msg of m.messages) {
-          if (msg.key.fromMe || !msg.message || msg.key.remoteJid === 'status@broadcast') {
+          const remoteJid = msg.key.remoteJid;
+          if (!remoteJid) continue;
+
+          // 1. REGRA ESTRITA: NUNCA responder em grupos, status, canais ou transmissões
+          if (
+            remoteJid.endsWith('@g.us') ||
+            remoteJid.includes('@broadcast') ||
+            remoteJid.endsWith('@newsletter') ||
+            msg.key.participant
+          ) {
+            // Ignora silenciosamente grupos
             continue;
           }
 
-          const remoteJid = msg.key.remoteJid;
-          if (!remoteJid || remoteJid.endsWith('@g.us')) {
-            continue; // Ignora grupos
-          }
-
-          const clientPhone = remoteJid.replace('@s.whatsapp.net', '');
-          const clientName = msg.pushName || 'Cliente';
+          const rawClientPhone = remoteJid.replace('@s.whatsapp.net', '');
+          const cleanClientPhone = rawClientPhone.replace(/\D/g, '');
+          const clientName = msg.pushName || 'Você';
 
           const messageText =
-            msg.message.conversation ||
-            msg.message.extendedTextMessage?.text ||
+            msg.message?.conversation ||
+            msg.message?.extendedTextMessage?.text ||
             '';
 
           if (!messageText || messageText.trim().length === 0) {
             continue;
           }
 
-          console.log(`[WhatsApp] Mensagem de ${clientName} (${clientPhone}): "${messageText}"`);
+          // Se a mensagem for idêntica à última resposta emitida pela IA, evita loop
+          if (this.recentBotReplies.has(messageText.trim())) {
+            continue;
+          }
 
-          // Verifica se este número está com atendimento humano assumido
-          if (storage.isHumanInterventionActive(clientPhone)) {
-            console.log(`[WhatsApp] Conversa com ${clientPhone} sob intervenção humana. A IA não interferirá.`);
-            storage.saveConversationMessage(clientPhone, 'user', messageText);
+          // 2. REGRA ESTRITA: Filtrar apenas o seu próprio número
+          const botPhone = (this.sock?.user?.id?.split(':')[0] || '').replace(/\D/g, '');
+          const establishment = storage.getEstablishment();
+          const adminPhone = (establishment.adminNotificationPhone || config.adminPhone || '').replace(/\D/g, '');
+
+          const allowedNumbers = [
+            botPhone,
+            adminPhone,
+            ...config.allowedPhoneNumbers
+          ].filter(Boolean);
+
+          const isMatchingPhone = (p1: string, p2: string): boolean => {
+            if (!p1 || !p2) return false;
+            if (p1 === p2) return true;
+            // Se os últimos 8 dígitos forem idênticos (tolerância a DDD/nono dígito)
+            const s1 = p1.slice(-8);
+            const s2 = p2.slice(-8);
+            return s1.length >= 8 && s1 === s2;
+          };
+
+          // Verifica se o remetente é um dos números autorizados
+          const isAuthorized = allowedNumbers.some(allowed => isMatchingPhone(cleanClientPhone, allowed));
+
+          if (!isAuthorized) {
+            console.log(`[WhatsApp Segurança] 🚫 Mensagem de ${cleanClientPhone} ignorada: apenas seu próprio número tem permissão.`);
+            continue;
+          }
+
+          // Se for mensagem enviada por si mesmo (fromMe), só aceita se for no próprio chat privado
+          if (msg.key.fromMe && cleanClientPhone !== botPhone) {
+            continue;
+          }
+
+          console.log(`[WhatsApp 👤 Seu Número] Mensagem recebida: "${messageText}"`);
+
+          // Verifica se está sob intervenção humana
+          if (storage.isHumanInterventionActive(cleanClientPhone)) {
+            console.log(`[WhatsApp] Conversa com ${cleanClientPhone} sob intervenção humana.`);
+            storage.saveConversationMessage(cleanClientPhone, 'user', messageText);
             continue;
           }
 
           try {
-            // Mostra presença digitando no WhatsApp
             if (this.sock) {
               await this.sock.presenceSubscribe(remoteJid);
               await this.sock.sendPresenceUpdate('composing', remoteJid);
             }
 
-            // Processa com a IA (Function Calling)
-            const replyText = await aiService.processMessage(clientPhone, messageText, clientName);
+            const replyText = await aiService.processMessage(cleanClientPhone, messageText, clientName);
 
-            // Pausa digitação e envia resposta
+            // Armazena no cache recente para não gerar auto-eco
+            this.recentBotReplies.add(replyText.trim());
+            if (this.recentBotReplies.size > 100) {
+              const firstItem = this.recentBotReplies.values().next().value;
+              if (firstItem) this.recentBotReplies.delete(firstItem);
+            }
+
             if (this.sock) {
               await this.sock.sendPresenceUpdate('paused', remoteJid);
               await this.sock.sendMessage(remoteJid, { text: replyText });
-              console.log(`[WhatsApp] Resposta enviada para ${clientPhone}`);
+              console.log(`[WhatsApp] Resposta enviada com sucesso para seu número!`);
             }
           } catch (err) {
-            console.error(`[WhatsApp] Erro ao responder cliente ${clientPhone}:`, err);
+            console.error(`[WhatsApp] Erro ao responder ${cleanClientPhone}:`, err);
           }
         }
       });
@@ -178,7 +229,7 @@ export class WhatsAppService {
     }
   }
 
-  // Enviar mensagem ativa (Lembretes, Pesquisas, Avisos)
+  // Enviar mensagem ativa
   public async sendMessageToClient(phone: string, text: string): Promise<boolean> {
     const clean = phone.replace(/\D/g, '');
     const remoteJid = `${clean}@s.whatsapp.net`;
@@ -193,8 +244,7 @@ export class WhatsAppService {
         return false;
       }
     } else {
-      // Loga caso não conectado
-      console.log(`[WhatsApp] Mensagem agendada/disparada para ${phone} (Offline): "${text}"`);
+      console.log(`[WhatsApp] Mensagem para ${phone} (Offline): "${text}"`);
       storage.saveConversationMessage(phone, 'assistant', text);
       return false;
     }
