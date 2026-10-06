@@ -151,16 +151,11 @@ export class WhatsAppService {
             continue;
           }
 
-          // 2. REGRA ESTRITA: Filtrar apenas o seu próprio número
+          // 2. REGRA ESTRITA: Filtrar apenas o seu próprio número (incluindo LID do WhatsApp)
           const botPhone = (this.sock?.user?.id?.split(':')[0] || '').replace(/\D/g, '');
+          const botLid = (this.sock?.user?.lid?.split(':')[0] || '').replace(/\D/g, '');
           const establishment = storage.getEstablishment();
           const adminPhone = (establishment.adminNotificationPhone || config.adminPhone || '').replace(/\D/g, '');
-
-          const allowedNumbers = [
-            botPhone,
-            adminPhone,
-            ...config.allowedPhoneNumbers
-          ].filter(Boolean);
 
           const isMatchingPhone = (p1: string, p2: string): boolean => {
             if (!p1 || !p2) return false;
@@ -171,25 +166,29 @@ export class WhatsAppService {
             return s1.length >= 8 && s1 === s2;
           };
 
-          // Verifica se o remetente é um dos números autorizados
-          const isAuthorized = allowedNumbers.some(allowed => isMatchingPhone(cleanClientPhone, allowed));
+          console.log('[WhatsApp Evento]', { remoteJid, cleanPhone: cleanClientPhone, fromMe: msg.key.fromMe, botPhone, botLid, text: messageText });
 
-          if (!isAuthorized) {
+          // Verifica se é o próprio usuário (via número normal ou via LID no chat com você mesmo)
+          const isSelf = isMatchingPhone(cleanClientPhone, botPhone) || (botLid && cleanClientPhone === botLid);
+          const isAllowedExternal = [adminPhone, ...config.allowedPhoneNumbers].filter(Boolean).some(num => isMatchingPhone(cleanClientPhone, num));
+
+          if (!isSelf && !isAllowedExternal) {
             console.log(`[WhatsApp Segurança] 🚫 Mensagem de ${cleanClientPhone} ignorada: apenas seu próprio número tem permissão.`);
             continue;
           }
 
-          // Se for mensagem enviada por si mesmo (fromMe), só aceita se for no próprio chat privado
-          if (msg.key.fromMe && cleanClientPhone !== botPhone) {
+          // Se for mensagem enviada por si mesmo (fromMe), aceita no chat consigo mesmo (self-chat)
+          if (msg.key.fromMe && !isSelf) {
             continue;
           }
 
-          console.log(`[WhatsApp 👤 Seu Número] Mensagem recebida: "${messageText}"`);
+          const effectivePhone = isSelf ? (botPhone || '5511951364159') : cleanClientPhone;
+          console.log(`[WhatsApp 👤 Seu Número] Processando mensagem com IA: "${messageText}"`);
 
           // Verifica se está sob intervenção humana
-          if (storage.isHumanInterventionActive(cleanClientPhone)) {
-            console.log(`[WhatsApp] Conversa com ${cleanClientPhone} sob intervenção humana.`);
-            storage.saveConversationMessage(cleanClientPhone, 'user', messageText);
+          if (storage.isHumanInterventionActive(effectivePhone)) {
+            console.log(`[WhatsApp] Conversa com ${effectivePhone} sob intervenção humana.`);
+            storage.saveConversationMessage(effectivePhone, 'user', messageText);
             continue;
           }
 
@@ -199,7 +198,7 @@ export class WhatsAppService {
               await this.sock.sendPresenceUpdate('composing', remoteJid);
             }
 
-            const replyText = await aiService.processMessage(cleanClientPhone, messageText, clientName);
+            const replyText = await aiService.processMessage(effectivePhone, messageText, clientName);
 
             // Armazena no cache recente para não gerar auto-eco
             this.recentBotReplies.add(replyText.trim());
