@@ -1,10 +1,10 @@
-import { GoogleGenerativeAI, SchemaType, FunctionDeclaration, Tool } from '@google/generative-ai';
+import { GoogleGenAI, FunctionDeclaration, Type } from '@google/genai';
 import { storage } from '../db/storage.js';
 import { config } from '../config.js';
 import { googleCalendar } from './calendar.js';
 
 export class AIService {
-  private genAI: GoogleGenerativeAI | null = null;
+  private genAI: GoogleGenAI | null = null;
   private currentApiKey: string = '';
 
   constructor() {
@@ -15,7 +15,7 @@ export class AIService {
     const key = apiKey || config.geminiApiKey || process.env.GEMINI_API_KEY;
     if (key && key.trim().length > 0) {
       this.currentApiKey = key.trim();
-      this.genAI = new GoogleGenerativeAI(this.currentApiKey);
+      this.genAI = new GoogleGenAI({ apiKey: this.currentApiKey });
     } else {
       this.genAI = null;
     }
@@ -31,10 +31,10 @@ export class AIService {
         name: 'buscar_servicos_e_profissionais',
         description: 'Consulta o catálogo de serviços do salão, valores, duração e quais profissionais realizam cada serviço.',
         parameters: {
-          type: SchemaType.OBJECT,
+          type: Type.OBJECT,
           properties: {
             categoria: {
-              type: SchemaType.STRING,
+              type: Type.STRING,
               description: 'Opcional: Categoria do serviço (ex: Cabelo, Unhas, Estética)'
             }
           }
@@ -44,18 +44,18 @@ export class AIService {
         name: 'consultar_disponibilidade',
         description: 'Consulta a agenda real e retorna os horários livres de um profissional específico em uma data.',
         parameters: {
-          type: SchemaType.OBJECT,
+          type: Type.OBJECT,
           properties: {
             nome_ou_id_profissional: {
-              type: SchemaType.STRING,
+              type: Type.STRING,
               description: 'Nome ou ID do profissional (ex: Maria, Priscila, Joana, Renata)'
             },
             data_desejada: {
-              type: SchemaType.STRING,
+              type: Type.STRING,
               description: 'Data no formato YYYY-MM-DD (ex: 2026-10-10)'
             },
             duracao_minutos: {
-              type: SchemaType.INTEGER,
+              type: Type.INTEGER,
               description: 'Duração prevista do serviço em minutos'
             }
           },
@@ -66,30 +66,30 @@ export class AIService {
         name: 'confirmar_e_criar_agendamento',
         description: 'Cria efetivamente o agendamento no sistema e sincroniza o calendário após confirmação explícita do cliente.',
         parameters: {
-          type: SchemaType.OBJECT,
+          type: Type.OBJECT,
           properties: {
             nome_cliente: {
-              type: SchemaType.STRING,
+              type: Type.STRING,
               description: 'Nome completo ou primeiro nome da cliente'
             },
             nome_profissional: {
-              type: SchemaType.STRING,
+              type: Type.STRING,
               description: 'Nome da profissional escolhida (Maria, Joana, Priscila, Renata)'
             },
             nome_servico: {
-              type: SchemaType.STRING,
+              type: Type.STRING,
               description: 'Nome do serviço escolhido (Progressiva, Corte, Manicure, Bronzeamento)'
             },
             data: {
-              type: SchemaType.STRING,
+              type: Type.STRING,
               description: 'Data do agendamento (YYYY-MM-DD)'
             },
             horario: {
-              type: SchemaType.STRING,
+              type: Type.STRING,
               description: 'Horário de início (HH:MM)'
             },
             observacoes: {
-              type: SchemaType.STRING,
+              type: Type.STRING,
               description: 'Observações adicionais ou preferências'
             }
           },
@@ -100,7 +100,7 @@ export class AIService {
         name: 'consultar_meus_agendamentos',
         description: 'Localiza os agendamentos já marcados para o número de WhatsApp da cliente.',
         parameters: {
-          type: SchemaType.OBJECT,
+          type: Type.OBJECT,
           properties: {}
         }
       },
@@ -108,18 +108,18 @@ export class AIService {
         name: 'reagendar_horario',
         description: 'Altera a data ou horário de um agendamento existente da cliente para um novo horário vago.',
         parameters: {
-          type: SchemaType.OBJECT,
+          type: Type.OBJECT,
           properties: {
             id_agendamento: {
-              type: SchemaType.STRING,
+              type: Type.STRING,
               description: 'Código ou ID do agendamento'
             },
             nova_data: {
-              type: SchemaType.STRING,
+              type: Type.STRING,
               description: 'Nova data desejada (YYYY-MM-DD)'
             },
             novo_horario: {
-              type: SchemaType.STRING,
+              type: Type.STRING,
               description: 'Novo horário desejado (HH:MM)'
             }
           },
@@ -130,14 +130,14 @@ export class AIService {
         name: 'cancelar_agendamento',
         description: 'Cancela um agendamento existente da cliente liberando o horário na agenda.',
         parameters: {
-          type: SchemaType.OBJECT,
+          type: Type.OBJECT,
           properties: {
             id_agendamento: {
-              type: SchemaType.STRING,
+              type: Type.STRING,
               description: 'Código do agendamento a cancelar'
             },
             motivo: {
-              type: SchemaType.STRING,
+              type: Type.STRING,
               description: 'Motivo do cancelamento informado pela cliente'
             }
           },
@@ -148,14 +148,14 @@ export class AIService {
         name: 'registrar_avaliacao_satisfacao',
         description: 'Registra a nota de satisfação (1 a 5 estrelas) e comentário da cliente após o atendimento.',
         parameters: {
-          type: SchemaType.OBJECT,
+          type: Type.OBJECT,
           properties: {
             nota: {
-              type: SchemaType.INTEGER,
+              type: Type.INTEGER,
               description: 'Nota de 1 a 5 estrelas'
             },
             comentario: {
-              type: SchemaType.STRING,
+              type: Type.STRING,
               description: 'Elogio, crítica ou sugestão da cliente'
             }
           },
@@ -166,10 +166,10 @@ export class AIService {
         name: 'chamar_atendimento_humano',
         description: 'Transfere a conversa para a recepcionista ou gerente humana quando o cliente solicita ou em casos complexos.',
         parameters: {
-          type: SchemaType.OBJECT,
+          type: Type.OBJECT,
           properties: {
             motivo: {
-              type: SchemaType.STRING,
+              type: Type.STRING,
               description: 'Breve motivo da transferência'
             }
           }
@@ -208,11 +208,10 @@ export class AIService {
         const { nome_ou_id_profissional, data_desejada, duracao_minutos } = args;
         const profs = storage.getProfessionals(establishment.id);
 
-        // Encontra profissional pelo nome aproximado
         const prof = profs.find(p =>
-          p.id.toLowerCase() === nome_ou_id_profissional.toLowerCase() ||
-          p.name.toLowerCase().includes(nome_ou_id_profissional.toLowerCase()) ||
-          p.nickname.toLowerCase().includes(nome_ou_id_profissional.toLowerCase())
+          p.id.toLowerCase() === (nome_ou_id_profissional || '').toLowerCase() ||
+          p.name.toLowerCase().includes((nome_ou_id_profissional || '').toLowerCase()) ||
+          p.nickname.toLowerCase().includes((nome_ou_id_profissional || '').toLowerCase())
         );
 
         if (!prof) {
@@ -240,7 +239,6 @@ export class AIService {
       case 'confirmar_e_criar_agendamento': {
         const { nome_cliente, nome_profissional, nome_servico, data, horario, observacoes } = args;
 
-        // Busca ou cria cadastro do cliente
         const client = storage.findOrCreateClient({
           establishmentId: establishment.id,
           name: nome_cliente || clientName || 'Cliente',
@@ -250,13 +248,13 @@ export class AIService {
 
         const profs = storage.getProfessionals(establishment.id);
         const prof = profs.find(p =>
-          p.name.toLowerCase().includes(nome_profissional.toLowerCase()) ||
-          p.nickname.toLowerCase().includes(nome_profissional.toLowerCase())
+          p.name.toLowerCase().includes((nome_profissional || '').toLowerCase()) ||
+          p.nickname.toLowerCase().includes((nome_profissional || '').toLowerCase())
         );
         if (!prof) return { sucesso: false, mensagem: `Profissional "${nome_profissional}" não encontrada.` };
 
         const services = storage.getServices(establishment.id);
-        const serv = services.find(s => s.name.toLowerCase().includes(nome_servico.toLowerCase()));
+        const serv = services.find(s => s.name.toLowerCase().includes((nome_servico || '').toLowerCase()));
         if (!serv) return { sucesso: false, mensagem: `Serviço "${nome_servico}" não encontrado.` };
 
         const result = storage.createAppointment({
@@ -275,7 +273,6 @@ export class AIService {
           return { sucesso: false, mensagem: result.message };
         }
 
-        // Sincroniza com o Google Calendar
         const gcalEventId = await googleCalendar.createEvent(result.appointment);
         if (gcalEventId) {
           result.appointment.googleEventId = gcalEventId;
@@ -398,7 +395,7 @@ export class AIService {
     }
 
     if (!this.genAI) {
-      return `Oi! 😊 Sou a *${establishment.secretaryName}*, recepcionista virtual do *${establishment.name}*.\n\n⚠️ O sistema de inteligência artificial ainda não possui a chave do Gemini configurada. Você pode adicioná-la no painel em http://localhost:${config.port}/.`;
+      return `Oi! 😊 Sou a *${establishment.secretaryName}*, recepcionista virtual do *${establishment.name}*.\n\n⚠️ O sistema de inteligência artificial ainda não possui a chave do Gemini configurada.`;
     }
 
     try {
@@ -424,68 +421,58 @@ INFORMAÇÃO TEMPORAL:
 - Hoje é: ${dataHoje} (${diaSemanaHoje})
 - Horário atual: ${horaHoje}
 
-PROFISSIONAIS E SERVIÇOS (REGRAS IMPORTANTES):
+PROFISSIONAIS E SERVIÇOS:
 - Maria: Progressiva (R$ 180, 2h30). Atende Segunda a Sábado.
 - Joana: Corte de cabelo (R$ 60, 1h). Atende Terça a Sábado.
 - Priscila: Manicure (R$ 40, 1h). Atende Segunda, Quarta e Sexta.
 - Renata: Bronzeamento (R$ 100, 1h30). Atende Quinta a Domingo.
 
-DIRETRIZES DE ATENDIMENTO:
+DIRETRIZES:
 1. NUNCA invente preços, horários ou profissionais. Sempre chame 'buscar_servicos_e_profissionais' ou 'consultar_disponibilidade'.
-2. Se o cliente disser tudo de uma vez (ex: "Quero fazer manicure sábado às 14"), NÃO fique perguntando de novo o serviço ou dia! Chame diretamente a disponibilidade para o horário indicado.
-3. Se o horário estiver vago, PERGUNTE SE PODE CONFIRMAR antes de registrar.
+2. Se o cliente já informou serviço e data (ex: "Quero manicure sexta às 14h"), consulte diretamente a disponibilidade sem perguntar tudo de novo.
+3. Se o horário estiver livre, pergunte se pode confirmar.
 4. Somente após a confirmação da cliente ("pode", "sim", "confirma"), chame 'confirmar_e_criar_agendamento'.
-5. Após confirmar, envie uma mensagem bonita com os dados do agendamento (Serviço, Profissional, Data, Horário, Valor e Endereço).
-6. Se o cliente pedir para mudar ou cancelar, localize os agendamentos com 'consultar_meus_agendamentos', confirme com o cliente e use 'reagendar_horario' ou 'cancelar_agendamento'.
-7. Se o cliente der uma nota (ex: "5", "adorei", "nota 4"), chame 'registrar_avaliacao_satisfacao'.
-8. Se pedir para falar com atendente ou humano, chame 'chamar_atendimento_humano'.
-9. Use emojis amigáveis de forma equilibrada (😊, 💜, 📅, ⏰). Não envie mensagens gigantes.
+5. Após confirmar, envie um resumo elegante com Serviço, Profissional, Data, Horário, Valor e Endereço.
+6. Use emojis de forma moderada e carinhosa (😊, 💜, 📅, ⏰).
       `.trim();
 
-      const tools: Tool[] = [
-        {
-          functionDeclarations: this.getFunctionDeclarations()
-        }
-      ];
-
-      const model = this.genAI.getGenerativeModel({
-        model: 'gemini-2.5-flash',
-        systemInstruction,
-        tools
-      });
-
       const history = storage.getConversationHistory(clientPhone);
-      const recentHistory = history.slice(0, -1).slice(-10);
+      // Pega as mensagens anteriores (exceto a última que acabamos de salvar)
+      const previousTurns = history.slice(0, -1).slice(-10).map(msg => ({
+        role: msg.sender === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.content }]
+      }));
 
-      const chat = model.startChat({
-        history: recentHistory.map(msg => ({
-          role: msg.sender === 'user' ? 'user' : 'model',
-          parts: [{ text: msg.content }]
-        }))
+      const chat = this.genAI.chats.create({
+        model: 'gemini-3.5-flash-lite',
+        history: previousTurns,
+        config: {
+          systemInstruction,
+          tools: [{
+            functionDeclarations: this.getFunctionDeclarations()
+          }]
+        }
       });
 
-      let response = await chat.sendMessage(userMessage);
-      let functionCalls = response.response.functionCalls();
+      let response = await chat.sendMessage({ message: userMessage });
 
       let iterations = 0;
-      while (functionCalls && functionCalls.length > 0 && iterations < 5) {
+      while (response.functionCalls && response.functionCalls.length > 0 && iterations < 5) {
         iterations++;
-        const functionCall = functionCalls[0];
-        const result = await this.executeFunction(functionCall.name, functionCall.args, clientPhone, clientName);
+        const call = response.functionCalls[0];
+        const result = await this.executeFunction(call.name || '', call.args, clientPhone, clientName);
 
-        response = await chat.sendMessage([
-          {
+        response = await chat.sendMessage({
+          message: [{
             functionResponse: {
-              name: functionCall.name,
+              name: call.name || '',
               response: result
             }
-          }
-        ]);
-
-        functionCalls = response.response.functionCalls();
+          }]
+        });
       }
 
-      const replyText = response.response.text();
+      const replyText = response.text || 'Horário e solicitação processados com sucesso! 😊';
       storage.saveConversationMessage(clientPhone, 'assistant', replyText);
       return replyText;
 

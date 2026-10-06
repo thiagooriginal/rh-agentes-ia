@@ -19,6 +19,7 @@ export class WhatsAppService {
     lastUpdated: new Date().toISOString()
   };
   private isConnecting: boolean = false;
+  private hasPrintedTerminalQR: boolean = false;
 
   public getStatus(): WhatsAppState {
     return { ...this.state };
@@ -56,10 +57,14 @@ export class WhatsAppService {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
-          console.log('\n=========================================');
-          console.log('  📲 ESCANEIE O QR CODE NO SEU WHATSAPP');
-          console.log('=========================================\n');
-          qrcodeTerminal.generate(qr, { small: true });
+          if (!this.hasPrintedTerminalQR) {
+            console.log('\n=========================================');
+            console.log('  📲 ESCANEIE O QR CODE NO SEU WHATSAPP');
+            console.log('  (Também disponível em http://localhost:' + config.port + ')');
+            console.log('=========================================\n');
+            qrcodeTerminal.generate(qr, { small: true });
+            this.hasPrintedTerminalQR = true;
+          }
 
           try {
             const dataUrl = await QRCode.toDataURL(qr);
