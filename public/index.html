@@ -3,293 +3,541 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Painel da Secretária Virtual</title>
-  <!-- Tailwind CSS CDN -->
+  <title>Studio Bella • Gestão Inteligente com IA</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
     .chat-bubble-user {
       background-color: #005c4b;
       color: #fff;
-      border-radius: 12px 12px 2px 12px;
+      border-radius: 14px 14px 2px 14px;
     }
     .chat-bubble-bot {
-      background-color: #202c33;
-      color: #e9edef;
-      border-radius: 12px 12px 12px 2px;
+      background-color: #1e293b;
+      color: #f1f5f9;
+      border-radius: 14px 14px 14px 2px;
+    }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(51, 65, 85, 0.6);
     }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-purple-600 selection:text-white">
 
-  <!-- Header -->
-  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+  <!-- Topbar Header -->
+  <header class="border-b border-slate-800/80 bg-slate-900/90 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-          <i data-lucide="bot" class="w-6 h-6"></i>
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-purple-500/20">
+          <i data-lucide="sparkles" class="w-5 h-5"></i>
         </div>
         <div>
-          <h1 class="text-base font-bold flex items-center gap-2">
-            <span id="headerSecretaryName">Sofia</span> • Secretária Virtual
+          <h1 class="text-sm font-bold tracking-tight flex items-center gap-2">
+            <span id="headerSalonName">Studio Bella</span>
+            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">IA + WhatsApp</span>
           </h1>
-          <p id="headerCompanyName" class="text-xs text-slate-400">Consultoria & Atendimento</p>
+          <p class="text-xs text-slate-400">Recepcionista: <span id="headerSecretaryName" class="text-slate-300 font-medium">Sofia</span></p>
         </div>
       </div>
 
-      <!-- Badges de Status -->
+      <!-- Indicadores de Status -->
       <div class="flex items-center space-x-3 text-xs">
-        <div id="badgeGemini" class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
-          <span class="w-2 h-2 rounded-full bg-yellow-400"></span>
+        <div id="badgeGemini" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-400">
+          <span class="w-2 h-2 rounded-full bg-amber-400"></span>
           <span>Gemini: Verificando...</span>
         </div>
-        <div id="badgeWhatsApp" class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
+        <div id="badgeWA" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-400">
           <span class="w-2 h-2 rounded-full bg-slate-500"></span>
           <span>WhatsApp: Desconectado</span>
+        </div>
+        <!-- Perfil do Usuário Ativo -->
+        <div class="hidden sm:flex items-center gap-2 pl-2 border-l border-slate-800">
+          <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-purple-400">
+            AD
+          </div>
+          <span class="text-xs font-medium text-slate-300">Admin</span>
         </div>
       </div>
     </div>
   </header>
 
-  <!-- Container Principal -->
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full flex flex-col md:flex-row gap-6">
+  <!-- Container Geral -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full flex flex-col md:flex-row gap-6">
 
-    <!-- Navegação Lateral -->
-    <aside class="w-full md:w-60 flex md:flex-col gap-2">
-      <button onclick="setTab('whatsapp')" id="tab-btn-whatsapp" class="tab-button active flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-        <i data-lucide="qr-code" class="w-4 h-4"></i>
-        <span>WhatsApp / Conexão</span>
+    <!-- Sidebar de Navegação -->
+    <aside class="w-full md:w-64 flex md:flex-col gap-1.5 overflow-x-auto pb-2 md:pb-0 shrink-0">
+      <button onclick="setTab('dashboard')" id="nav-dashboard" class="nav-btn active flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition bg-purple-600/15 text-purple-400 border border-purple-500/20">
+        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+        <span>Dashboard</span>
       </button>
-      <button onclick="setTab('appointments')" id="tab-btn-appointments" class="tab-button flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent">
+      <button onclick="setTab('agenda')" id="nav-agenda" class="nav-btn flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent">
         <i data-lucide="calendar" class="w-4 h-4"></i>
-        <span>Agendamentos</span>
+        <span>Agenda & Horários</span>
       </button>
-      <button onclick="setTab('services')" id="tab-btn-services" class="tab-button flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent">
-        <i data-lucide="briefcase" class="w-4 h-4"></i>
+      <button onclick="setTab('professionals')" id="nav-professionals" class="nav-btn flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent">
+        <i data-lucide="users" class="w-4 h-4"></i>
+        <span>Profissionais</span>
+      </button>
+      <button onclick="setTab('services')" id="nav-services" class="nav-btn flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent">
+        <i data-lucide="scissors" class="w-4 h-4"></i>
         <span>Serviços & Preços</span>
       </button>
-      <button onclick="setTab('simulator')" id="tab-btn-simulator" class="tab-button flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent">
-        <i data-lucide="message-square" class="w-4 h-4"></i>
-        <span>Simulador de Teste</span>
+      <button onclick="setTab('clients')" id="nav-clients" class="nav-btn flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent">
+        <i data-lucide="user-check" class="w-4 h-4"></i>
+        <span>Clientes</span>
       </button>
-      <button onclick="setTab('settings')" id="tab-btn-settings" class="tab-button flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent">
+      <button onclick="setTab('financial')" id="nav-financial" class="nav-btn flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent">
+        <i data-lucide="dollar-sign" class="w-4 h-4"></i>
+        <span>Financeiro & DRE</span>
+      </button>
+      <button onclick="setTab('reviews')" id="nav-reviews" class="nav-btn flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent">
+        <i data-lucide="star" class="w-4 h-4"></i>
+        <span>Avaliações</span>
+      </button>
+      <button onclick="setTab('simulator')" id="nav-simulator" class="nav-btn flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent">
+        <i data-lucide="message-square" class="w-4 h-4"></i>
+        <span>Simulador IA</span>
+      </button>
+      <button onclick="setTab('whatsapp')" id="nav-whatsapp" class="nav-btn flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent">
+        <i data-lucide="qr-code" class="w-4 h-4"></i>
+        <span>Conexão WhatsApp</span>
+      </button>
+      <button onclick="setTab('settings')" id="nav-settings" class="nav-btn flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent">
         <i data-lucide="settings" class="w-4 h-4"></i>
         <span>Configurações</span>
       </button>
     </aside>
 
-    <!-- Área de Conteúdo -->
-    <main class="flex-1 bg-slate-900/50 border border-slate-800 rounded-2xl p-6 relative">
+    <!-- Conteúdo Principal -->
+    <main class="flex-1 glass-card rounded-2xl p-6 min-h-[700px]">
 
-      <!-- ABA 1: WHATSAPP -->
-      <section id="tab-whatsapp" class="tab-content">
-        <div class="mb-6">
-          <h2 class="text-xl font-bold">Conexão do WhatsApp</h2>
-          <p class="text-sm text-slate-400">Escaneie o QR Code no seu aplicativo do WhatsApp para ativar a secretária virtual.</p>
+      <!-- ABA 1: DASHBOARD -->
+      <section id="tab-dashboard" class="tab-pane space-y-6">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h2 class="text-xl font-bold tracking-tight">Painel Gerencial</h2>
+            <p class="text-xs text-slate-400">Visão consolidada da operação, atendimento por IA e finanças.</p>
+          </div>
+          <div class="flex gap-2 text-xs">
+            <span class="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 font-medium">Mês Atual: Outubro</span>
+          </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-          <!-- Card QR Code -->
-          <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col items-center text-center">
-            <div id="qrContainer" class="w-64 h-64 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center p-4 mb-4 relative overflow-hidden">
-              <div id="qrLoading" class="text-center text-slate-500">
-                <i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto mb-2 text-emerald-400"></i>
-                <p class="text-xs">Aguardando geração do QR Code...</p>
-              </div>
-              <img id="qrImage" src="" alt="QR Code WhatsApp" class="w-full h-full object-contain hidden" />
-              <div id="qrSuccess" class="hidden text-center text-emerald-400">
-                <i data-lucide="check-circle" class="w-12 h-12 mx-auto mb-2"></i>
-                <p class="font-semibold text-sm">Conectado ao WhatsApp!</p>
-                <p id="connectedPhoneText" class="text-xs text-slate-400 mt-1"></p>
-              </div>
+        <!-- Cards KPIs -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
+            <span class="text-xs text-slate-400">Agendamentos Hoje</span>
+            <div class="text-2xl font-bold text-purple-400 mt-1" id="kpiTodayCount">0</div>
+            <span class="text-[11px] text-slate-500">Confirmados no sistema</span>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
+            <span class="text-xs text-slate-400">Atendimentos no Mês</span>
+            <div class="text-2xl font-bold text-slate-100 mt-1" id="kpiMonthCount">0</div>
+            <span class="text-[11px] text-emerald-400" id="kpiAttendanceRate">100% compar.</span>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
+            <span class="text-xs text-slate-400">Faturamento Bruto</span>
+            <div class="text-2xl font-bold text-emerald-400 mt-1" id="kpiGrossRevenue">R$ 0,00</div>
+            <span class="text-[11px] text-slate-500">Serviços + Aluguéis</span>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
+            <span class="text-xs text-slate-400">Avaliação Média</span>
+            <div class="text-2xl font-bold text-amber-400 mt-1 flex items-center gap-1.5" id="kpiAvgRating">
+              <span>5.0</span>
+              <span class="text-sm">⭐</span>
             </div>
+            <span class="text-[11px] text-slate-500" id="kpiReviewsCount">0 avaliações</span>
+          </div>
+        </div>
 
-            <div class="flex gap-3">
-              <button onclick="reconnectWhatsApp()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition flex items-center gap-2">
-                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-                <span>Reconectar / Novo QR</span>
-              </button>
-              <button onclick="disconnectWhatsApp()" class="px-4 py-2 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border border-rose-500/30 rounded-lg text-sm font-medium transition flex items-center gap-2">
-                <i data-lucide="log-out" class="w-4 h-4"></i>
-                <span>Desconectar</span>
-              </button>
+        <!-- Gráficos e DRE Resumido -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 p-5 rounded-xl bg-slate-900/80 border border-slate-800">
+            <h3 class="text-sm font-semibold mb-4 text-slate-200">Receitas vs Despesas (Mês Atual)</h3>
+            <div class="h-64">
+              <canvas id="chartFinancial"></canvas>
             </div>
           </div>
 
-          <!-- Instruções de Conexão -->
-          <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
-            <h3 class="font-semibold text-sm text-slate-200 mb-3 flex items-center gap-2">
-              <i data-lucide="smartphone" class="w-4 h-4 text-emerald-400"></i>
-              <span>Como conectar seu WhatsApp:</span>
-            </h3>
-            <ol class="text-sm text-slate-400 space-y-3 list-decimal list-inside">
-              <li>Abra o <strong>WhatsApp</strong> no seu celular.</li>
-              <li>Toque em <strong>Mais opções</strong> (⋮ no Android) ou <strong>Configurações</strong> (no iPhone).</li>
-              <li>Toque em <strong>Aparelhos conectados</strong> e depois em <strong>Conectar um aparelho</strong>.</li>
-              <li>Aponte a câmera do seu celular para o QR Code ao lado.</li>
-              <li>Pronto! Assim que conectar, qualquer cliente que mandar mensagem será atendido pela Sofia.</li>
-            </ol>
-
-            <div class="mt-6 p-4 rounded-lg bg-emerald-950/40 border border-emerald-500/20 text-xs text-emerald-300">
-              💡 <strong>Dica:</strong> A secretária já vem equipada com inteligência artificial para entender linguagem natural, apresentar seus serviços e fechar agendamentos automaticamente!
+          <!-- DRE Simplificada Card -->
+          <div class="p-5 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
+            <div>
+              <h3 class="text-sm font-semibold mb-3 text-slate-200">DRE Gerencial Estimada</h3>
+              <div class="space-y-2 text-xs">
+                <div class="flex justify-between py-1 border-b border-slate-800">
+                  <span class="text-slate-400">(+) Receitas Serviços</span>
+                  <span class="font-medium text-emerald-400" id="dreServ">R$ 0,00</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-slate-800">
+                  <span class="text-slate-400">(+) Aluguel Cadeiras</span>
+                  <span class="font-medium text-emerald-400" id="dreRent">R$ 0,00</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-slate-800">
+                  <span class="text-slate-400">(-) Repasse Profissionais</span>
+                  <span class="font-medium text-rose-400" id="drePayout">R$ 0,00</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-slate-800">
+                  <span class="text-slate-400">(-) Despesas Operacionais</span>
+                  <span class="font-medium text-rose-400" id="dreExp">R$ 0,00</span>
+                </div>
+              </div>
+            </div>
+            <div class="pt-4 border-t border-slate-800 mt-4">
+              <div class="flex justify-between items-center">
+                <span class="text-xs font-semibold text-slate-300">Resultado Líquido</span>
+                <span class="text-lg font-bold text-emerald-400" id="dreNet">R$ 0,00</span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- ABA 2: AGENDAMENTOS -->
-      <section id="tab-appointments" class="tab-content hidden">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+      <!-- ABA 2: AGENDA & AGENDAMENTOS -->
+      <section id="tab-agenda" class="tab-pane hidden space-y-4">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
-            <h2 class="text-xl font-bold">Agendamentos</h2>
-            <p class="text-sm text-slate-400">Horários marcados pelos clientes via WhatsApp e pela secretária virtual.</p>
+            <h2 class="text-xl font-bold">Agenda & Atendimentos</h2>
+            <p class="text-xs text-slate-400">Gestão de horários agendados pela IA no WhatsApp ou criados manualmente.</p>
           </div>
-          <button onclick="openNewAppointmentModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition flex items-center gap-2">
+          <button onclick="openNewAppointmentModal()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold transition flex items-center gap-2 shadow-lg shadow-purple-600/20">
             <i data-lucide="plus" class="w-4 h-4"></i>
             <span>Novo Agendamento Manual</span>
           </button>
         </div>
 
-        <!-- Tabela -->
-        <div class="overflow-x-auto border border-slate-800 rounded-xl">
-          <table class="w-full text-left text-sm">
-            <thead class="bg-slate-950/60 text-slate-400 border-b border-slate-800">
+        <!-- Filtros Rápidos -->
+        <div class="flex flex-wrap gap-2 text-xs pt-2">
+          <input type="date" id="filterDate" onchange="fetchAppointments()" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200">
+          <select id="filterProf" onchange="fetchAppointments()" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200">
+            <option value="">Todas as profissionais</option>
+          </select>
+          <select id="filterStatus" onchange="fetchAppointments()" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200">
+            <option value="">Todos os status</option>
+            <option value="CONFIRMADO">Confirmados</option>
+            <option value="CONCLUIDO">Concluídos</option>
+            <option value="CANCELADO">Cancelados</option>
+            <option value="NAO_COMPARECEU">Não compareceu</option>
+          </select>
+        </div>
+
+        <!-- Tabela de Agendamentos -->
+        <div class="overflow-x-auto rounded-xl border border-slate-800 mt-2">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-900/90 text-slate-400 border-b border-slate-800">
               <tr>
                 <th class="p-3">ID</th>
-                <th class="p-3">Cliente</th>
-                <th class="p-3">Telefone</th>
                 <th class="p-3">Data & Hora</th>
+                <th class="p-3">Cliente</th>
+                <th class="p-3">Profissional</th>
                 <th class="p-3">Serviço</th>
+                <th class="p-3">Valor</th>
                 <th class="p-3">Status</th>
                 <th class="p-3 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody id="appointmentsTableBody" class="divide-y divide-slate-800">
-              <tr>
-                <td colspan="7" class="p-6 text-center text-slate-500">Carregando agendamentos...</td>
-              </tr>
+            <tbody id="tableAppointmentsBody" class="divide-y divide-slate-800/60">
+              <tr><td colspan="8" class="p-6 text-center text-slate-500">Carregando agendamentos...</td></tr>
             </tbody>
           </table>
         </div>
       </section>
 
-      <!-- ABA 3: SERVIÇOS -->
-      <section id="tab-services" class="tab-content hidden">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+      <!-- ABA 3: PROFISSIONAIS -->
+      <section id="tab-professionals" class="tab-pane hidden space-y-4">
+        <div class="flex justify-between items-center">
           <div>
-            <h2 class="text-xl font-bold">Serviços & Preços</h2>
-            <p class="text-sm text-slate-400">Estes são os serviços que a Secretária Virtual divulga e agenda para os clientes.</p>
+            <h2 class="text-xl font-bold">Equipe de Profissionais</h2>
+            <p class="text-xs text-slate-400">Maria, Joana, Priscila, Renata e regras financeiras de comissão / aluguel fixo.</p>
           </div>
-          <button onclick="openNewServiceModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition flex items-center gap-2">
-            <i data-lucide="plus" class="w-4 h-4"></i>
-            <span>Adicionar Serviço</span>
+          <button onclick="openNewProfModal()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold flex items-center gap-2">
+            <i data-lucide="user-plus" class="w-4 h-4"></i>
+            <span>Nova Profissional</span>
           </button>
         </div>
 
-        <div id="servicesListGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <!-- Inserido dinamicamente via JS -->
+        <div id="gridProfessionals" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+          <!-- Cards dinâmicos inseridos via JS -->
         </div>
       </section>
 
-      <!-- ABA 4: SIMULADOR DE CHAT -->
-      <section id="tab-simulator" class="tab-content hidden h-[650px] flex flex-col">
-        <div class="mb-4">
-          <h2 class="text-xl font-bold">Simulador de Conversa</h2>
-          <p class="text-sm text-slate-400">Converse em tempo real com a sua secretária para testar o comportamento e agendamentos.</p>
+      <!-- ABA 4: SERVIÇOS & PREÇOS -->
+      <section id="tab-services" class="tab-pane hidden space-y-4">
+        <div class="flex justify-between items-center">
+          <div>
+            <h2 class="text-xl font-bold">Catálogo de Serviços</h2>
+            <p class="text-xs text-slate-400">Preços, durações e profissionais habilitadas que a IA utiliza para agendar.</p>
+          </div>
+          <button onclick="openNewServiceModal()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold flex items-center gap-2">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>Novo Serviço</span>
+          </button>
         </div>
 
-        <!-- Janela de Chat estilo WhatsApp -->
-        <div class="flex-1 bg-slate-950 border border-slate-800 rounded-xl flex flex-col overflow-hidden">
-          <!-- Cabeçalho do Chat -->
-          <div class="p-3 bg-slate-900 border-b border-slate-800 flex items-center gap-3">
-            <div class="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+        <div id="gridServices" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+          <!-- Cards de Serviços dinâmicos -->
+        </div>
+      </section>
+
+      <!-- ABA 5: CLIENTES -->
+      <section id="tab-clients" class="tab-pane hidden space-y-4">
+        <div class="flex justify-between items-center">
+          <div>
+            <h2 class="text-xl font-bold">Base de Clientes</h2>
+            <p class="text-xs text-slate-400">Cadastros criados automaticamente via WhatsApp com histórico de consumo e fidelidade.</p>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border border-slate-800 mt-2">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-900/90 text-slate-400 border-b border-slate-800">
+              <tr>
+                <th class="p-3">Nome</th>
+                <th class="p-3">WhatsApp</th>
+                <th class="p-3">Total Visitas</th>
+                <th class="p-3">Total Gasto</th>
+                <th class="p-3">Cancelamentos</th>
+                <th class="p-3">Faltas</th>
+                <th class="p-3">Última Visita</th>
+              </tr>
+            </thead>
+            <tbody id="tableClientsBody" class="divide-y divide-slate-800/60">
+              <!-- Dados dinâmicos -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ABA 6: FINANCEIRO & DRE -->
+      <section id="tab-financial" class="tab-pane hidden space-y-6">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div>
+            <h2 class="text-xl font-bold">Controle Financeiro</h2>
+            <p class="text-xs text-slate-400">Contas a pagar, receitas de atendimentos, comissões de parceiras e DRE gerencial.</p>
+          </div>
+          <button onclick="openNewExpenseModal()" class="px-4 py-2 bg-rose-600/80 hover:bg-rose-600 text-white rounded-xl text-xs font-semibold flex items-center gap-2">
+            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+            <span>Cadastrar Despesa / Conta a Pagar</span>
+          </button>
+        </div>
+
+        <!-- Seção Contas a Pagar -->
+        <div>
+          <h3 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">
+            <i data-lucide="credit-card" class="w-4 h-4 text-rose-400"></i>
+            <span>Contas a Pagar & Despesas Operacionais</span>
+          </h3>
+          <div class="overflow-x-auto rounded-xl border border-slate-800">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-900/90 text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="p-3">Descrição</th>
+                  <th class="p-3">Categoria</th>
+                  <th class="p-3">Vencimento</th>
+                  <th class="p-3">Valor</th>
+                  <th class="p-3">Status</th>
+                  <th class="p-3 text-right">Ação</th>
+                </tr>
+              </thead>
+              <tbody id="tableExpensesBody" class="divide-y divide-slate-800/60">
+                <!-- Inserido dinamicamente -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Seção Receitas Recentes -->
+        <div>
+          <h3 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">
+            <i data-lucide="trending-up" class="w-4 h-4 text-emerald-400"></i>
+            <span>Receitas Realizadas (Atendimentos & Aluguel de Cadeiras)</span>
+          </h3>
+          <div class="overflow-x-auto rounded-xl border border-slate-800">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-900/90 text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="p-3">Descrição</th>
+                  <th class="p-3">Forma Pagamento</th>
+                  <th class="p-3">Data</th>
+                  <th class="p-3">Valor Bruto</th>
+                  <th class="p-3">Parte Profissional</th>
+                  <th class="p-3">Parte Salão</th>
+                </tr>
+              </thead>
+              <tbody id="tableRevenuesBody" class="divide-y divide-slate-800/60">
+                <!-- Inserido dinamicamente -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ABA 7: AVALIAÇÕES & QUALIDADE -->
+      <section id="tab-reviews" class="tab-pane hidden space-y-4">
+        <div>
+          <h2 class="text-xl font-bold">Avaliações & Pesquisa de Satisfação</h2>
+          <p class="text-xs text-slate-400">Feedbacks de 1 a 5 estrelas coletados automaticamente pela IA 30 minutos após cada atendimento.</p>
+        </div>
+
+        <div id="listReviews" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <!-- Inserido dinamicamente -->
+        </div>
+      </section>
+
+      <!-- ABA 8: SIMULADOR DE ATENDIMENTO COM IA -->
+      <section id="tab-simulator" class="tab-pane hidden h-[650px] flex flex-col">
+        <div class="mb-3">
+          <h2 class="text-xl font-bold">Simulador de WhatsApp da Recepcionista</h2>
+          <p class="text-xs text-slate-400">Teste o fluxo completo: tirar dúvidas, verificar horários vagos, confirmar, reagendar e cancelar.</p>
+        </div>
+
+        <div class="flex-1 bg-slate-950 border border-slate-800 rounded-2xl flex flex-col overflow-hidden">
+          <div class="p-3.5 bg-slate-900 border-b border-slate-800 flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-purple-600 to-pink-500 text-white font-bold flex items-center justify-center text-sm shadow-md">
               S
             </div>
             <div>
-              <p class="text-sm font-semibold" id="simHeaderName">Sofia (Secretária Virtual)</p>
-              <p class="text-xs text-emerald-400">Online • Atendimento Inteligente</p>
+              <p class="text-xs font-bold text-slate-100">Sofia • Recepcionista Virtual</p>
+              <p class="text-[11px] text-emerald-400 font-medium">Online • Conectada ao Google Gemini</p>
             </div>
           </div>
 
-          <!-- Mensagens -->
-          <div id="chatMessagesContainer" class="flex-1 p-4 overflow-y-auto space-y-3">
+          <div id="simMessagesContainer" class="flex-1 p-4 overflow-y-auto space-y-3">
             <div class="flex justify-start">
-              <div class="chat-bubble-bot p-3 max-w-[80%] text-sm">
-                Olá! Como posso te ajudar hoje? Posso tirar dúvidas sobre nossos serviços ou agendar um horário para você!
+              <div class="chat-bubble-bot p-3 text-xs max-w-[85%] leading-relaxed">
+                Oi! 😊 Seja bem-vinda ao Studio Bella! Sou a Sofia, como posso te ajudar hoje? Posso tirar dúvidas sobre nossos serviços de cabelo, unhas e estética ou já verificar os melhores horários para você com a Maria, Joana, Priscila ou Renata!
               </div>
             </div>
           </div>
 
-          <!-- Input do Chat -->
-          <form onsubmit="handleSendSimulation(event)" class="p-3 bg-slate-900 border-t border-slate-800 flex gap-2">
-            <input id="chatInput" type="text" placeholder="Digite uma mensagem (ex: 'Quais serviços vocês oferecem?' ou 'Quero agendar amanhã')..." 
-              class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
-            <button type="submit" id="btnSendChat" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition flex items-center gap-2">
-              <i data-lucide="send" class="w-4 h-4"></i>
+          <form onsubmit="handleSendSimMessage(event)" class="p-3 bg-slate-900/90 border-t border-slate-800 flex gap-2">
+            <input id="simInput" type="text" placeholder="Ex: 'Queria fazer manicure com a Priscila sexta às 14' ou 'Quais serviços vocês têm?'..." 
+              class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-purple-500">
+            <button type="submit" class="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold flex items-center gap-2">
+              <i data-lucide="send" class="w-3.5 h-3.5"></i>
               <span>Enviar</span>
             </button>
           </form>
         </div>
       </section>
 
-      <!-- ABA 5: CONFIGURAÇÕES -->
-      <section id="tab-settings" class="tab-content hidden">
-        <div class="mb-6">
-          <h2 class="text-xl font-bold">Configurações da Secretária</h2>
-          <p class="text-sm text-slate-400">Personalize a identidade da secretária e as informações da sua empresa.</p>
+      <!-- ABA 9: WHATSAPP -->
+      <section id="tab-whatsapp" class="tab-pane hidden space-y-6">
+        <div>
+          <h2 class="text-xl font-bold">Conexão do WhatsApp</h2>
+          <p class="text-xs text-slate-400">Escaneie o QR Code no WhatsApp da empresa para ativar o atendimento 24 horas.</p>
         </div>
 
-        <form onsubmit="handleSaveSettings(event)" class="max-w-2xl space-y-4">
-          <!-- Chave Gemini -->
-          <div class="bg-slate-950 border border-emerald-500/30 p-4 rounded-xl">
-            <label class="block text-sm font-semibold text-emerald-400 mb-1 flex items-center gap-2">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+          <div class="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col items-center text-center">
+            <div id="qrBox" class="w-64 h-64 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center p-4 mb-4 relative overflow-hidden">
+              <div id="qrLoading" class="text-center text-slate-500">
+                <i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto mb-2 text-purple-400"></i>
+                <p class="text-xs">Aguardando QR Code...</p>
+              </div>
+              <img id="qrImg" src="" alt="QR Code WhatsApp" class="w-full h-full object-contain hidden" />
+              <div id="qrOk" class="hidden text-center text-emerald-400">
+                <i data-lucide="check-circle" class="w-12 h-12 mx-auto mb-2"></i>
+                <p class="font-bold text-sm">WhatsApp Conectado!</p>
+                <p id="qrConnectedPhone" class="text-xs text-slate-400 mt-1"></p>
+              </div>
+            </div>
+
+            <div class="flex gap-2">
+              <button onclick="reconnectWA()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold flex items-center gap-2">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                <span>Reconectar</span>
+              </button>
+              <button onclick="disconnectWA()" class="px-4 py-2 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border border-rose-500/30 rounded-xl text-xs font-semibold flex items-center gap-2">
+                <i data-lucide="log-out" class="w-4 h-4"></i>
+                <span>Desconectar</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3 text-xs text-slate-300">
+            <h3 class="font-bold text-sm text-slate-100 flex items-center gap-2">
+              <i data-lucide="smartphone" class="w-4 h-4 text-purple-400"></i>
+              <span>Como conectar:</span>
+            </h3>
+            <ol class="space-y-2 list-decimal list-inside text-slate-400">
+              <li>Abra o WhatsApp no aparelho da empresa.</li>
+              <li>Acesse <strong>Aparelhos conectados</strong> > <strong>Conectar um aparelho</strong>.</li>
+              <li>Aponte a câmera para o QR Code ao lado.</li>
+            </ol>
+            <div class="p-3 bg-purple-950/40 border border-purple-500/20 rounded-xl text-purple-300">
+              💜 <strong>Dica:</strong> A recepcionista virtual atende mensagens privadas automaticamente. Em caso de pedidos para falar com um humano, ela sinaliza a conversa no painel e pausa para você responder!
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ABA 10: CONFIGURAÇÕES -->
+      <section id="tab-settings" class="tab-pane hidden space-y-6">
+        <div>
+          <h2 class="text-xl font-bold">Configurações Gerais do Estabelecimento</h2>
+          <p class="text-xs text-slate-400">Dados do salão, horários, chave do Google Gemini e regras operacionais.</p>
+        </div>
+
+        <form onsubmit="handleSaveEstablishment(event)" class="max-w-2xl space-y-4">
+          <div class="p-4 rounded-xl bg-purple-950/20 border border-purple-500/30">
+            <label class="block text-xs font-bold text-purple-300 mb-1 flex items-center gap-2">
               <i data-lucide="key" class="w-4 h-4"></i>
-              <span>Google Gemini API Key</span>
+              <span>Chave de API do Google Gemini</span>
             </label>
-            <p class="text-xs text-slate-400 mb-2">Obtenha sua chave gratuita no <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-emerald-400 underline">Google AI Studio</a>.</p>
-            <input type="password" id="inputGeminiApiKey" placeholder="Cole sua chave AI Studio aqui..."
-              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+            <p class="text-[11px] text-slate-400 mb-2">Obtenha gratuitamente no <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-purple-400 underline">Google AI Studio</a>.</p>
+            <input type="password" id="inputGeminiKey" placeholder="Cole sua chave Gemini aqui..." class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-purple-500">
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Nome da Secretária</label>
-              <input type="text" id="inputSecretaryName" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:border-emerald-500">
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Nome do Salão</label>
+              <input type="text" id="cfgSalonName" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Nome da Empresa / Consultório</label>
-              <input type="text" id="inputCompanyName" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:border-emerald-500">
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Nome da Recepcionista Virtual</label>
+              <input type="text" id="cfgSecretaryName" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100">
             </div>
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Descrição do Negócio / Especialidade</label>
-            <textarea id="inputCompanyDescription" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:border-emerald-500"></textarea>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Horário de Funcionamento</label>
-            <input type="text" id="inputWorkingHours" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:border-emerald-500">
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Endereço Completo</label>
+            <input type="text" id="cfgAddress" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100">
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Endereço da Empresa</label>
-              <input type="text" id="inputAddress" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:border-emerald-500">
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Telefone / WhatsApp</label>
+              <input type="text" id="cfgPhone" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Telefone do Responsável / Admin</label>
-              <input type="text" id="inputAdminPhone" placeholder="Ex: 5511999999999" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:border-emerald-500">
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Telefone Transferência Humana</label>
+              <input type="text" id="cfgTransferPhone" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Modo de Conclusão</label>
+              <select id="cfgCompletionMode" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100">
+                <option value="AUTO">Conclusão Automática ao término (+30 min)</option>
+                <option value="MANUAL">Conclusão Manual pelo Profissional</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Alerta Avaliação Baixa (Estrelas)</label>
+              <input type="number" id="cfgLowRating" min="1" max="4" value="2" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100">
             </div>
           </div>
 
           <div class="pt-2">
-            <button type="submit" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-semibold transition flex items-center gap-2">
+            <button type="submit" class="px-6 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold flex items-center gap-2">
               <i data-lucide="save" class="w-4 h-4"></i>
-              <span>Salvar Configurações</span>
+              <span>Salvar Alterações</span>
             </button>
           </div>
         </form>
@@ -298,71 +546,86 @@
     </main>
   </div>
 
-  <!-- MODAL: NOVO SERVIÇO -->
-  <div id="modalService" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <!-- MODAL NOVO AGENDAMENTO MANUAL -->
+  <div id="modalNewApp" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6">
-      <h3 class="text-lg font-bold mb-4">Adicionar Serviço</h3>
-      <form onsubmit="handleSaveService(event)" class="space-y-4">
+      <h3 class="text-base font-bold mb-4">Novo Agendamento</h3>
+      <form onsubmit="handleSaveManualApp(event)" class="space-y-3 text-xs">
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Nome do Serviço</label>
-          <input type="text" id="serviceName" required placeholder="Ex: Avaliação Médica" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100">
+          <label class="block font-semibold mb-1">Nome da Cliente</label>
+          <input type="text" id="mAppClientName" required placeholder="Ex: Fernanda Lima" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Descrição</label>
-          <textarea id="serviceDesc" rows="2" placeholder="Explique brevemente o serviço..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100"></textarea>
+          <label class="block font-semibold mb-1">Telefone / WhatsApp</label>
+          <input type="text" id="mAppClientPhone" required placeholder="Ex: 5511999998888" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100">
         </div>
-        <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-semibold mb-1">Profissional</label>
+          <select id="mAppProf" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100"></select>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Serviço</label>
+          <select id="mAppService" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100"></select>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Preço (R$)</label>
-            <input type="number" id="servicePrice" step="0.01" required placeholder="150.00" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100">
+            <label class="block font-semibold mb-1">Data</label>
+            <input type="date" id="mAppDate" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Duração (minutos)</label>
-            <input type="number" id="serviceDuration" required value="45" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100">
+            <label class="block font-semibold mb-1">Horário (HH:MM)</label>
+            <input type="time" id="mAppTime" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100">
           </div>
         </div>
-        <div class="flex justify-end gap-2 pt-2">
-          <button type="button" onclick="closeServiceModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm">Cancelar</button>
-          <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-semibold">Salvar</button>
+        <div class="flex justify-end gap-2 pt-3">
+          <button type="button" onclick="closeModal('modalNewApp')" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl">Cancelar</button>
+          <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-xl font-semibold">Confirmar</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- MODAL: NOVO AGENDAMENTO MANUAL -->
-  <div id="modalAppointment" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <!-- MODAL NOVA DESPESA -->
+  <div id="modalNewExpense" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6">
-      <h3 class="text-lg font-bold mb-4">Novo Agendamento Manual</h3>
-      <form onsubmit="handleSaveAppointment(event)" class="space-y-4">
+      <h3 class="text-base font-bold mb-4">Nova Despesa / Conta a Pagar</h3>
+      <form onsubmit="handleSaveExpense(event)" class="space-y-3 text-xs">
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Nome do Cliente</label>
-          <input type="text" id="appClientName" required placeholder="Ex: João da Silva" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100">
+          <label class="block font-semibold mb-1">Descrição</label>
+          <input type="text" id="mExpDesc" required placeholder="Ex: Produtos de Cabelo" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100">
         </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">WhatsApp / Telefone</label>
-          <input type="text" id="appClientPhone" required placeholder="Ex: 5511999998888" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100">
-        </div>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-2 gap-2">
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Data (AAAA-MM-DD)</label>
-            <input type="date" id="appDate" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100">
+            <label class="block font-semibold mb-1">Categoria</label>
+            <select id="mExpCat" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100">
+              <option value="UTILIDADES">Utilidades (Água, Luz)</option>
+              <option value="ALUGUEL">Aluguel do Imóvel</option>
+              <option value="PRODUTOS">Produtos & Cosméticos</option>
+              <option value="MARKETING">Marketing</option>
+              <option value="OUTROS">Outros</option>
+            </select>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Horário (HH:MM)</label>
-            <input type="time" id="appTime" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100">
+            <label class="block font-semibold mb-1">Valor (R$)</label>
+            <input type="number" step="0.01" id="mExpAmount" required placeholder="150.00" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100">
           </div>
         </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Serviço</label>
-          <input type="text" id="appService" required placeholder="Ex: Consulta Inicial" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold mb-1">Vencimento</label>
+            <input type="date" id="mExpDueDate" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100">
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">Recorrente todo mês?</label>
+            <select id="mExpRec" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100">
+              <option value="false">Não</option>
+              <option value="true">Sim (todo mês)</option>
+            </select>
+          </div>
         </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Observações (Opcional)</label>
-          <input type="text" id="appNotes" placeholder="Ex: Primeira consulta" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100">
-        </div>
-        <div class="flex justify-end gap-2 pt-2">
-          <button type="button" onclick="closeAppointmentModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm">Cancelar</button>
-          <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-semibold">Salvar</button>
+        <div class="flex justify-end gap-2 pt-3">
+          <button type="button" onclick="closeModal('modalNewExpense')" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl">Cancelar</button>
+          <button type="submit" class="px-4 py-2 bg-rose-600 text-white rounded-xl font-semibold">Salvar</button>
         </div>
       </form>
     </div>

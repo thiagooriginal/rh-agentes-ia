@@ -1,60 +1,69 @@
-// Estado da aplicação
-let currentTab = 'whatsapp';
-let statusPollInterval = null;
+let currentTab = 'dashboard';
+let financialChart = null;
 
-// Inicialização
 document.addEventListener('DOMContentLoaded', () => {
   if (window.lucide) window.lucide.createIcons();
   fetchStatus();
-  fetchSettings();
-  fetchServices();
+  fetchDashboardKPIs();
   fetchAppointments();
+  fetchProfessionals();
+  fetchServices();
+  fetchClients();
+  fetchFinancialData();
+  fetchReviews();
+  fetchSettings();
 
-  // Polling de status a cada 3 segundos
-  statusPollInterval = setInterval(fetchStatus, 3000);
+  // Polling regular a cada 4 segundos
+  setInterval(() => {
+    fetchStatus();
+    if (currentTab === 'dashboard') fetchDashboardKPIs();
+    if (currentTab === 'agenda') fetchAppointments();
+  }, 4000);
 });
 
-// Navegação de Abas
 function setTab(tabId) {
   currentTab = tabId;
 
-  // Atualiza botões
-  document.querySelectorAll('.tab-button').forEach(btn => {
-    btn.classList.remove('bg-emerald-500/10', 'text-emerald-400', 'border-emerald-500/20');
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.classList.remove('bg-purple-600/15', 'text-purple-400', 'border-purple-500/20');
     btn.classList.add('text-slate-400', 'border-transparent');
   });
 
-  const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+  const activeBtn = document.getElementById(`nav-${tabId}`);
   if (activeBtn) {
-    activeBtn.classList.add('bg-emerald-500/10', 'text-emerald-400', 'border-emerald-500/20');
+    activeBtn.classList.add('bg-purple-600/15', 'text-purple-400', 'border-purple-500/20');
     activeBtn.classList.remove('text-slate-400', 'border-transparent');
   }
 
-  // Atualiza seções
-  document.querySelectorAll('.tab-content').forEach(content => {
-    content.classList.add('hidden');
-  });
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
+  const activePane = document.getElementById(`tab-${tabId}`);
+  if (activePane) activePane.classList.remove('hidden');
 
-  const activeContent = document.getElementById(`tab-${tabId}`);
-  if (activeContent) {
-    activeContent.classList.remove('hidden');
-  }
-
-  if (tabId === 'appointments') fetchAppointments();
+  if (tabId === 'dashboard') fetchDashboardKPIs();
+  if (tabId === 'agenda') fetchAppointments();
+  if (tabId === 'professionals') fetchProfessionals();
   if (tabId === 'services') fetchServices();
+  if (tabId === 'clients') fetchClients();
+  if (tabId === 'financial') fetchFinancialData();
+  if (tabId === 'reviews') fetchReviews();
+
   if (window.lucide) window.lucide.createIcons();
 }
 
-// Buscar Status Geral & WhatsApp
+function closeModal(modalId) {
+  const el = document.getElementById(modalId);
+  if (el) el.classList.add('hidden');
+}
+
+// --- STATUS & WHATSAPP ---
 async function fetchStatus() {
   try {
     const res = await fetch('/api/status');
     const data = await res.json();
 
-    // Atualiza cabeçalho
-    if (data.secretaryName) document.getElementById('headerSecretaryName').innerText = data.secretaryName;
-    if (data.companyName) document.getElementById('headerCompanyName').innerText = data.companyName;
-    if (data.secretaryName) document.getElementById('simHeaderName').innerText = `${data.secretaryName} (Secretária Virtual)`;
+    const est = data.establishment || {};
+    if (est.name) document.getElementById('headerSalonName').innerText = est.name;
+    if (est.secretaryName) document.getElementById('headerSecretaryName').innerText = est.secretaryName;
 
     // Badge Gemini
     const badgeGemini = document.getElementById('badgeGemini');
@@ -64,31 +73,30 @@ async function fetchStatus() {
       badgeGemini.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400"></span><span class="text-amber-300">Gemini: Sem Chave</span>';
     }
 
-    // Badge e Painel WhatsApp
-    const badgeWA = document.getElementById('badgeWhatsApp');
+    // Badge WhatsApp
+    const badgeWA = document.getElementById('badgeWA');
     const qrLoading = document.getElementById('qrLoading');
-    const qrImage = document.getElementById('qrImage');
-    const qrSuccess = document.getElementById('qrSuccess');
-    const connectedPhoneText = document.getElementById('connectedPhoneText');
+    const qrImg = document.getElementById('qrImg');
+    const qrOk = document.getElementById('qrOk');
+    const qrConnectedPhone = document.getElementById('qrConnectedPhone');
 
     const wa = data.whatsapp || {};
-
     if (wa.state === 'connected') {
       badgeWA.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400"></span><span class="text-emerald-300">WhatsApp: Conectado</span>';
       qrLoading.classList.add('hidden');
-      qrImage.classList.add('hidden');
-      qrSuccess.classList.remove('hidden');
-      connectedPhoneText.innerText = `Número: +${wa.phoneNumber || 'Ativo'}`;
+      qrImg.classList.add('hidden');
+      qrOk.classList.remove('hidden');
+      qrConnectedPhone.innerText = `Número: +${wa.phoneNumber || 'Ativo'}`;
     } else if (wa.state === 'qr_ready' && wa.qrCodeDataUrl) {
       badgeWA.innerHTML = '<span class="w-2 h-2 rounded-full bg-sky-400"></span><span class="text-sky-300">WhatsApp: Escanear QR</span>';
       qrLoading.classList.add('hidden');
-      qrSuccess.classList.add('hidden');
-      qrImage.src = wa.qrCodeDataUrl;
-      qrImage.classList.remove('hidden');
+      qrOk.classList.add('hidden');
+      qrImg.src = wa.qrCodeDataUrl;
+      qrImg.classList.remove('hidden');
     } else {
       badgeWA.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-500"></span><span class="text-slate-400">WhatsApp: Desconectado</span>';
-      qrImage.classList.add('hidden');
-      qrSuccess.classList.add('hidden');
+      qrImg.classList.add('hidden');
+      qrOk.classList.add('hidden');
       qrLoading.classList.remove('hidden');
     }
   } catch (err) {
@@ -96,194 +104,156 @@ async function fetchStatus() {
   }
 }
 
-// Ações do WhatsApp
-async function reconnectWhatsApp() {
+async function reconnectWA() {
   try {
-    const res = await fetch('/api/whatsapp/connect', { method: 'POST' });
-    const data = await res.json();
-    alert(data.message || 'Tentando reconectar...');
+    await fetch('/api/whatsapp/connect', { method: 'POST' });
+    alert('Tentando reconectar WhatsApp...');
     fetchStatus();
   } catch (e) {
-    alert('Erro ao tentar reconectar.');
+    alert('Erro ao reconectar.');
   }
 }
 
-async function disconnectWhatsApp() {
+async function disconnectWA() {
   if (!confirm('Deseja realmente desconectar a sessão do WhatsApp?')) return;
   try {
     await fetch('/api/whatsapp/disconnect', { method: 'POST' });
-    alert('WhatsApp desconectado.');
+    alert('Sessão desconectada.');
     fetchStatus();
   } catch (e) {
     alert('Erro ao desconectar.');
   }
 }
 
-// Configurações
-async function fetchSettings() {
+// --- DASHBOARD KPIS & GRÁFICO ---
+async function fetchDashboardKPIs() {
   try {
-    const res = await fetch('/api/settings');
-    const data = await res.json();
-    document.getElementById('inputSecretaryName').value = data.secretaryName || '';
-    document.getElementById('inputCompanyName').value = data.companyName || '';
-    document.getElementById('inputCompanyDescription').value = data.companyDescription || '';
-    document.getElementById('inputWorkingHours').value = data.workingHours || '';
-    document.getElementById('inputAddress').value = data.address || '';
-    document.getElementById('inputAdminPhone').value = data.adminPhone || '';
+    const res = await fetch('/api/dashboard/kpis');
+    const kpis = await res.json();
+
+    document.getElementById('kpiTodayCount').innerText = kpis.todayCount || 0;
+    document.getElementById('kpiMonthCount').innerText = kpis.monthAppointmentsCount || 0;
+    document.getElementById('kpiAttendanceRate').innerText = `${kpis.attendanceRate || 100}% comparecimento`;
+    document.getElementById('kpiGrossRevenue').innerText = `R$ ${kpis.grossRevenue.toFixed(2)}`;
+    document.getElementById('kpiAvgRating').innerHTML = `<span>${kpis.averageRating}</span><span class="text-sm">⭐</span>`;
+    document.getElementById('kpiReviewsCount').innerText = `${kpis.reviewsCount} avaliações`;
+
+    // DRE Card
+    const dre = kpis.dre || {};
+    document.getElementById('dreServ').innerText = `R$ ${(dre.totalServiceRevenue || 0).toFixed(2)}`;
+    document.getElementById('dreRent').innerText = `R$ ${(dre.totalRentChairRevenue || 0).toFixed(2)}`;
+    document.getElementById('drePayout').innerText = `R$ ${(dre.totalProfessionalPayout || 0).toFixed(2)}`;
+    document.getElementById('dreExp').innerText = `R$ ${(dre.totalExpenses || 0).toFixed(2)}`;
+    document.getElementById('dreNet').innerText = `R$ ${(dre.estimatedNetResult || 0).toFixed(2)}`;
+
+    // Atualiza Chart.js
+    renderFinancialChart(dre);
   } catch (err) {
-    console.error('Erro ao buscar settings:', err);
+    console.error('Erro ao carregar KPIs:', err);
   }
 }
 
-async function handleSaveSettings(e) {
-  e.preventDefault();
-  const geminiApiKey = document.getElementById('inputGeminiApiKey').value;
-  const body = {
-    secretaryName: document.getElementById('inputSecretaryName').value,
-    companyName: document.getElementById('inputCompanyName').value,
-    companyDescription: document.getElementById('inputCompanyDescription').value,
-    workingHours: document.getElementById('inputWorkingHours').value,
-    address: document.getElementById('inputAddress').value,
-    adminPhone: document.getElementById('inputAdminPhone').value,
-  };
-  if (geminiApiKey) {
-    body.geminiApiKey = geminiApiKey;
+function renderFinancialChart(dre) {
+  const ctx = document.getElementById('chartFinancial');
+  if (!ctx) return;
+
+  const labels = ['Faturamento Bruto', 'Repasse Profissionais', 'Despesas Operacionais', 'Lucro Líquido Salão'];
+  const values = [
+    dre.totalGrossRevenue || 0,
+    dre.totalProfessionalPayout || 0,
+    dre.totalExpenses || 0,
+    dre.estimatedNetResult || 0
+  ];
+
+  if (financialChart) {
+    financialChart.data.datasets[0].data = values;
+    financialChart.update();
+    return;
   }
 
-  try {
-    const res = await fetch('/api/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    if (res.ok) {
-      alert('Configurações salvas com sucesso!');
-      document.getElementById('inputGeminiApiKey').value = '';
-      fetchStatus();
-      fetchSettings();
+  financialChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'R$ no Mês',
+        data: values,
+        backgroundColor: [
+          'rgba(168, 85, 247, 0.7)',
+          'rgba(244, 63, 94, 0.7)',
+          'rgba(239, 68, 68, 0.7)',
+          'rgba(16, 185, 129, 0.7)'
+        ],
+        borderRadius: 8
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        y: {
+          ticks: { color: '#94a3b8' },
+          grid: { color: '#334155' }
+        },
+        x: {
+          ticks: { color: '#cbd5e1' },
+          grid: { display: false }
+        }
+      }
     }
-  } catch (err) {
-    alert('Erro ao salvar configurações.');
-  }
+  });
 }
 
-// Serviços
-async function fetchServices() {
-  try {
-    const res = await fetch('/api/services');
-    const services = await res.json();
-    const grid = document.getElementById('servicesListGrid');
-    grid.innerHTML = '';
-
-    if (services.length === 0) {
-      grid.innerHTML = '<p class="text-sm text-slate-500 col-span-3">Nenhum serviço cadastrado.</p>';
-      return;
-    }
-
-    services.forEach(s => {
-      const card = document.createElement('div');
-      card.className = 'bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col justify-between';
-      card.innerHTML = `
-        <div>
-          <div class="flex justify-between items-start mb-2">
-            <h4 class="font-bold text-base text-slate-100">${s.name}</h4>
-            <span class="text-xs px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 font-semibold">R$ ${s.price.toFixed(2)}</span>
-          </div>
-          <p class="text-xs text-slate-400 mb-4">${s.description || 'Sem descrição.'}</p>
-        </div>
-        <div class="flex justify-between items-center pt-3 border-t border-slate-800 text-xs text-slate-500">
-          <span>⏱️ ${s.durationMinutes} minutos</span>
-          <button onclick="deleteService('${s.id}')" class="text-rose-400 hover:text-rose-300 font-medium">Excluir</button>
-        </div>
-      `;
-      grid.appendChild(card);
-    });
-  } catch (err) {
-    console.error('Erro ao buscar serviços:', err);
-  }
-}
-
-function openNewServiceModal() {
-  document.getElementById('modalService').classList.remove('hidden');
-}
-
-function closeServiceModal() {
-  document.getElementById('modalService').classList.add('hidden');
-}
-
-async function handleSaveService(e) {
-  e.preventDefault();
-  const body = {
-    name: document.getElementById('serviceName').value,
-    description: document.getElementById('serviceDesc').value,
-    price: parseFloat(document.getElementById('servicePrice').value),
-    durationMinutes: parseInt(document.getElementById('serviceDuration').value)
-  };
-
-  try {
-    const res = await fetch('/api/services', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    if (res.ok) {
-      closeServiceModal();
-      fetchServices();
-    }
-  } catch (err) {
-    alert('Erro ao salvar serviço.');
-  }
-}
-
-async function deleteService(id) {
-  if (!confirm('Deseja remover este serviço?')) return;
-  try {
-    await fetch(`/api/services/${id}`, { method: 'DELETE' });
-    fetchServices();
-  } catch (e) {
-    alert('Erro ao excluir serviço.');
-  }
-}
-
-// Agendamentos
+// --- AGENDAMENTOS ---
 async function fetchAppointments() {
   try {
-    const res = await fetch('/api/appointments');
-    const appointments = await res.json();
-    const tbody = document.getElementById('appointmentsTableBody');
+    const date = document.getElementById('filterDate')?.value;
+    const prof = document.getElementById('filterProf')?.value;
+    const status = document.getElementById('filterStatus')?.value;
+
+    let url = '/api/appointments?';
+    if (date) url += `date=${date}&`;
+    if (prof) url += `professionalId=${prof}&`;
+    if (status) url += `status=${status}&`;
+
+    const res = await fetch(url);
+    const apps = await res.json();
+    const tbody = document.getElementById('tableAppointmentsBody');
     tbody.innerHTML = '';
 
-    if (appointments.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-slate-500">Nenhum agendamento registrado até o momento.</td></tr>';
+    if (apps.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" class="p-6 text-center text-slate-500">Nenhum agendamento encontrado para o filtro.</td></tr>';
       return;
     }
 
-    appointments.forEach(app => {
+    apps.forEach(a => {
+      let badge = '';
+      if (a.status === 'CONFIRMADO') badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-purple-500/20 text-purple-300 font-semibold">Confirmado</span>';
+      else if (a.status === 'CONCLUIDO') badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-400 font-semibold">Concluído</span>';
+      else if (a.status === 'CANCELADO') badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-rose-500/20 text-rose-400 font-semibold">Cancelado</span>';
+      else if (a.status === 'NAO_COMPARECEU') badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-400 font-semibold">Não compareceu</span>';
+      else badge = `<span class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300 font-semibold">${a.status}</span>`;
+
       const tr = document.createElement('tr');
       tr.className = 'hover:bg-slate-900/60 transition';
-
-      let statusBadge = '';
-      if (app.status === 'confirmed') {
-        statusBadge = '<span class="px-2 py-0.5 rounded text-xs bg-emerald-500/20 text-emerald-400 font-medium">Confirmado</span>';
-      } else if (app.status === 'cancelled') {
-        statusBadge = '<span class="px-2 py-0.5 rounded text-xs bg-rose-500/20 text-rose-400 font-medium">Cancelado</span>';
-      } else {
-        statusBadge = '<span class="px-2 py-0.5 rounded text-xs bg-sky-500/20 text-sky-400 font-medium">Concluído</span>';
-      }
-
       tr.innerHTML = `
-        <td class="p-3 font-mono text-xs text-slate-400 font-semibold">${app.id}</td>
-        <td class="p-3 font-semibold text-slate-200">${app.clientName}</td>
-        <td class="p-3 text-slate-400 text-xs">${app.clientPhone}</td>
-        <td class="p-3 text-slate-300 font-medium">${app.date} às ${app.time}</td>
-        <td class="p-3 text-slate-300 text-xs">${app.service}</td>
-        <td class="p-3">${statusBadge}</td>
-        <td class="p-3 text-right space-x-2">
-          ${app.status === 'confirmed' ? `
-            <button onclick="changeAppointmentStatus('${app.id}', 'completed')" class="text-xs text-emerald-400 hover:underline">Concluir</button>
-            <button onclick="changeAppointmentStatus('${app.id}', 'cancelled')" class="text-xs text-rose-400 hover:underline">Cancelar</button>
+        <td class="p-3 font-mono font-bold text-slate-400">${a.id}</td>
+        <td class="p-3 font-medium text-slate-200">${a.date} às ${a.startTime}</td>
+        <td class="p-3 text-slate-200">${a.clientName} <span class="text-slate-500 block text-[10px]">${a.clientPhone}</span></td>
+        <td class="p-3 text-purple-300 font-medium">${a.professionalName}</td>
+        <td class="p-3 text-slate-300">${a.serviceName}</td>
+        <td class="p-3 font-semibold text-slate-200">R$ ${a.priceCharged.toFixed(2)}</td>
+        <td class="p-3">${badge}</td>
+        <td class="p-3 text-right space-x-1.5 whitespace-nowrap">
+          ${a.status === 'CONFIRMADO' ? `
+            <button onclick="changeAppStatus('${a.id}', 'CONCLUIDO')" class="text-emerald-400 hover:underline">Concluir</button>
+            <button onclick="changeAppStatus('${a.id}', 'CANCELADO')" class="text-rose-400 hover:underline">Cancelar</button>
+            <button onclick="changeAppStatus('${a.id}', 'NAO_COMPARECEU')" class="text-amber-400 hover:underline">No-show</button>
           ` : `
-            <button onclick="changeAppointmentStatus('${app.id}', 'confirmed')" class="text-xs text-slate-400 hover:underline">Reativar</button>
+            <span class="text-slate-600 text-[10px]">Finalizado</span>
           `}
         </td>
       `;
@@ -294,23 +264,33 @@ async function fetchAppointments() {
   }
 }
 
+async function changeAppStatus(id, status) {
+  try {
+    await fetch(`/api/appointments/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+    fetchAppointments();
+    fetchDashboardKPIs();
+  } catch (e) {
+    alert('Erro ao atualizar status.');
+  }
+}
+
 function openNewAppointmentModal() {
-  document.getElementById('modalAppointment').classList.remove('hidden');
+  document.getElementById('modalNewApp').classList.remove('hidden');
 }
 
-function closeAppointmentModal() {
-  document.getElementById('modalAppointment').classList.add('hidden');
-}
-
-async function handleSaveAppointment(e) {
+async function handleSaveManualApp(e) {
   e.preventDefault();
   const body = {
-    clientName: document.getElementById('appClientName').value,
-    clientPhone: document.getElementById('appClientPhone').value,
-    date: document.getElementById('appDate').value,
-    time: document.getElementById('appTime').value,
-    service: document.getElementById('appService').value,
-    notes: document.getElementById('appNotes').value,
+    clientName: document.getElementById('mAppClientName').value,
+    clientPhone: document.getElementById('mAppClientPhone').value,
+    professionalId: document.getElementById('mAppProf').value,
+    serviceId: document.getElementById('mAppService').value,
+    date: document.getElementById('mAppDate').value,
+    startTime: document.getElementById('mAppTime').value,
   };
 
   try {
@@ -319,75 +299,382 @@ async function handleSaveAppointment(e) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     });
-    if (res.ok) {
-      closeAppointmentModal();
+    const data = await res.json();
+    if (res.ok && data.success) {
+      closeModal('modalNewApp');
       fetchAppointments();
+      fetchDashboardKPIs();
+      alert('Agendamento realizado com sucesso!');
+    } else {
+      alert(data.error || 'Erro ao realizar agendamento.');
     }
   } catch (e) {
-    alert('Erro ao registrar agendamento.');
+    alert('Erro na requisição.');
   }
 }
 
-async function changeAppointmentStatus(id, status) {
+// --- PROFISSIONAIS ---
+async function fetchProfessionals() {
   try {
-    await fetch(`/api/appointments/${id}/status`, {
+    const res = await fetch('/api/professionals');
+    const profs = await res.json();
+
+    // Atualiza selects
+    const selectFilter = document.getElementById('filterProf');
+    const selectModal = document.getElementById('mAppProf');
+    if (selectFilter) {
+      selectFilter.innerHTML = '<option value="">Todas as profissionais</option>' + profs.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    }
+    if (selectModal) {
+      selectModal.innerHTML = profs.map(p => `<option value="${p.id}">${p.name} (${p.specialty})</option>`).join('');
+    }
+
+    // Grid de cards
+    const grid = document.getElementById('gridProfessionals');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    profs.forEach(p => {
+      const rule = p.financialRule || {};
+      let ruleDesc = '';
+      if (rule.type === 'PERCENTUAL') {
+        ruleDesc = `Percentual: ${rule.percentProfessional}% Profissional / ${rule.percentSalon}% Salão`;
+      } else if (rule.type === 'ALUGUEL_FIXO') {
+        ruleDesc = `Aluguel Fixo de Cadeira: R$ ${rule.fixedRentMonthly?.toFixed(2)}/mês (Vence dia ${rule.rentDueDay})`;
+      } else {
+        ruleDesc = `Funcionário Fixo`;
+      }
+
+      const card = document.createElement('div');
+      card.className = 'p-5 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col justify-between';
+      card.innerHTML = `
+        <div>
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-11 h-11 rounded-full bg-gradient-to-tr from-purple-600 to-pink-500 text-white font-bold flex items-center justify-center text-sm shadow-md">
+              ${p.name.charAt(0)}
+            </div>
+            <div>
+              <h4 class="font-bold text-sm text-slate-100">${p.name}</h4>
+              <p class="text-xs text-purple-300">${p.specialty}</p>
+            </div>
+          </div>
+          <div class="space-y-1.5 text-xs text-slate-400 mt-2">
+            <p>📞 ${p.phone}</p>
+            <p class="p-2 rounded-lg bg-slate-950 text-[11px] text-slate-300 font-medium border border-slate-800">
+              💼 ${ruleDesc}
+            </p>
+          </div>
+        </div>
+        <div class="pt-3 border-t border-slate-800/80 mt-4 flex justify-between items-center text-xs">
+          <span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-400 font-semibold">${p.status}</span>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+  } catch (err) {
+    console.error('Erro ao carregar profissionais:', err);
+  }
+}
+
+// --- SERVIÇOS ---
+async function fetchServices() {
+  try {
+    const res = await fetch('/api/services');
+    const services = await res.json();
+
+    const selectModal = document.getElementById('mAppService');
+    if (selectModal) {
+      selectModal.innerHTML = services.map(s => `<option value="${s.id}">${s.name} - R$ ${s.price.toFixed(2)} (${s.durationMinutes} min)</option>`).join('');
+    }
+
+    const grid = document.getElementById('gridServices');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    services.forEach(s => {
+      const card = document.createElement('div');
+      card.className = 'p-5 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col justify-between';
+      card.innerHTML = `
+        <div>
+          <div class="flex justify-between items-start mb-2">
+            <h4 class="font-bold text-sm text-slate-100">${s.name}</h4>
+            <span class="text-xs px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 font-bold">R$ ${s.price.toFixed(2)}</span>
+          </div>
+          <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-semibold">${s.category}</span>
+          <p class="text-xs text-slate-400 mt-2">${s.description || 'Sem descrição.'}</p>
+        </div>
+        <div class="pt-3 border-t border-slate-800 text-xs text-slate-500 flex justify-between items-center mt-4">
+          <span>⏱️ ${s.durationMinutes} minutos</span>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+  } catch (err) {
+    console.error('Erro ao buscar serviços:', err);
+  }
+}
+
+// --- CLIENTES ---
+async function fetchClients() {
+  try {
+    const res = await fetch('/api/clients');
+    const clients = await res.json();
+    const tbody = document.getElementById('tableClientsBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    clients.forEach(c => {
+      const tr = document.createElement('tr');
+      tr.className = 'hover:bg-slate-900/60 transition';
+      tr.innerHTML = `
+        <td class="p-3 font-semibold text-slate-100">${c.name}</td>
+        <td class="p-3 text-slate-300">${c.phone}</td>
+        <td class="p-3 text-purple-300 font-medium">${c.totalVisits || 0} visitas</td>
+        <td class="p-3 font-semibold text-emerald-400">R$ ${(c.totalSpent || 0).toFixed(2)}</td>
+        <td class="p-3 text-rose-400">${c.cancellationCount || 0}</td>
+        <td class="p-3 text-amber-400">${c.noShowCount || 0}</td>
+        <td class="p-3 text-slate-400">${c.lastVisit || c.firstVisit || '-'}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    console.error('Erro ao carregar clientes:', err);
+  }
+}
+
+// --- FINANCEIRO ---
+async function fetchFinancialData() {
+  try {
+    // Despesas
+    const resExp = await fetch('/api/financial/expenses');
+    const expenses = await resExp.json();
+    const tbodyExp = document.getElementById('tableExpensesBody');
+    if (tbodyExp) {
+      tbodyExp.innerHTML = '';
+      expenses.forEach(e => {
+        const isPaid = e.status === 'PAGA';
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-900/60 transition';
+        tr.innerHTML = `
+          <td class="p-3 font-medium text-slate-200">${e.description} ${e.isRecurring ? '<span class="text-[10px] text-purple-400 font-semibold ml-1">(Recorrente)</span>' : ''}</td>
+          <td class="p-3 text-slate-400">${e.category}</td>
+          <td class="p-3 text-slate-300">${e.dueDate}</td>
+          <td class="p-3 font-semibold text-rose-400">R$ ${e.amount.toFixed(2)}</td>
+          <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] ${isPaid ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'} font-semibold">${e.status}</span></td>
+          <td class="p-3 text-right">
+            ${!isPaid ? `<button onclick="markExpensePaid('${e.id}')" class="text-emerald-400 hover:underline">Marcar Paga</button>` : `<span class="text-slate-600 text-[10px]">Paga</span>`}
+          </td>
+        `;
+        tbodyExp.appendChild(tr);
+      });
+    }
+
+    // Receitas
+    const resRev = await fetch('/api/financial/revenues');
+    const revenues = await resRev.json();
+    const tbodyRev = document.getElementById('tableRevenuesBody');
+    if (tbodyRev) {
+      tbodyRev.innerHTML = '';
+      revenues.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-900/60 transition';
+        tr.innerHTML = `
+          <td class="p-3 font-medium text-slate-200">${r.description}</td>
+          <td class="p-3 text-slate-400">${r.paymentMethod}</td>
+          <td class="p-3 text-slate-300">${r.paidAt ? r.paidAt.split('T')[0] : '-'}</td>
+          <td class="p-3 font-semibold text-emerald-400">R$ ${r.grossAmount.toFixed(2)}</td>
+          <td class="p-3 text-purple-300">R$ ${r.valProfessional.toFixed(2)}</td>
+          <td class="p-3 text-emerald-300 font-semibold">R$ ${r.valSalon.toFixed(2)}</td>
+        `;
+        tbodyRev.appendChild(tr);
+      });
+    }
+  } catch (err) {
+    console.error('Erro ao carregar dados financeiros:', err);
+  }
+}
+
+function openNewExpenseModal() {
+  document.getElementById('modalNewExpense').classList.remove('hidden');
+}
+
+async function handleSaveExpense(e) {
+  e.preventDefault();
+  const body = {
+    description: document.getElementById('mExpDesc').value,
+    category: document.getElementById('mExpCat').value,
+    amount: parseFloat(document.getElementById('mExpAmount').value),
+    dueDate: document.getElementById('mExpDueDate').value,
+    status: 'A_VENCER',
+    isRecurring: document.getElementById('mExpRec').value === 'true',
+    recurrenceDay: parseInt(document.getElementById('mExpDueDate').value.split('-')[2])
+  };
+
+  try {
+    await fetch('/api/financial/expenses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    closeModal('modalNewExpense');
+    fetchFinancialData();
+    fetchDashboardKPIs();
+  } catch (e) {
+    alert('Erro ao salvar despesa.');
+  }
+}
+
+async function markExpensePaid(id) {
+  try {
+    await fetch(`/api/financial/expenses/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status })
+      body: JSON.stringify({ status: 'PAGA', paidDate: new Date().toISOString().split('T')[0] })
     });
-    fetchAppointments();
+    fetchFinancialData();
+    fetchDashboardKPIs();
   } catch (e) {
-    alert('Erro ao alterar status.');
+    alert('Erro ao atualizar despesa.');
   }
 }
 
-// Simulador de Chat
-async function handleSendSimulation(e) {
+// --- AVALIAÇÕES ---
+async function fetchReviews() {
+  try {
+    const res = await fetch('/api/reviews');
+    const reviews = await res.json();
+    const container = document.getElementById('listReviews');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (reviews.length === 0) {
+      container.innerHTML = '<p class="text-xs text-slate-500 col-span-2">Nenhuma avaliação registrada ainda.</p>';
+      return;
+    }
+
+    reviews.forEach(r => {
+      const isAlert = r.statusAlert === 'ALERTA_BAIXA_NOTA';
+      const card = document.createElement('div');
+      card.className = `p-4 rounded-2xl bg-slate-900 border ${isAlert ? 'border-rose-500/40 bg-rose-950/10' : 'border-slate-800'} flex flex-col justify-between`;
+      card.innerHTML = `
+        <div>
+          <div class="flex justify-between items-start mb-2">
+            <div>
+              <h4 class="font-bold text-sm text-slate-100">${r.clientName}</h4>
+              <p class="text-xs text-purple-300">Atendida por: ${r.professionalName}</p>
+            </div>
+            <div class="flex text-amber-400 text-sm">
+              ${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}
+            </div>
+          </div>
+          <p class="text-xs text-slate-300 italic mt-2">"${r.comment}"</p>
+        </div>
+        <div class="mt-4 pt-3 border-t border-slate-800/80 flex justify-between items-center text-[10px] text-slate-500">
+          <span>${r.createdAt.split('T')[0]}</span>
+          ${isAlert ? '<span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold">⚠️ ALERTA DE NOTA BAIXA</span>' : ''}
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  } catch (err) {
+    console.error('Erro ao carregar avaliações:', err);
+  }
+}
+
+// --- SIMULADOR DE CHAT IA ---
+async function handleSendSimMessage(e) {
   e.preventDefault();
-  const input = document.getElementById('chatInput');
-  const message = input.value.trim();
-  if (!message) return;
+  const input = document.getElementById('simInput');
+  const msg = input.value.trim();
+  if (!msg) return;
 
-  const container = document.getElementById('chatMessagesContainer');
+  const container = document.getElementById('simMessagesContainer');
 
-  // Adiciona bolha do usuário
-  const userBubble = document.createElement('div');
-  userBubble.className = 'flex justify-end';
-  userBubble.innerHTML = `<div class="chat-bubble-user p-3 max-w-[80%] text-sm">${message}</div>`;
-  container.appendChild(userBubble);
+  const userDiv = document.createElement('div');
+  userDiv.className = 'flex justify-end';
+  userDiv.innerHTML = `<div class="chat-bubble-user p-3 text-xs max-w-[85%]">${msg}</div>`;
+  container.appendChild(userDiv);
   input.value = '';
   container.scrollTop = container.scrollHeight;
 
-  // Placeholder digitando
-  const typingBubble = document.createElement('div');
-  typingBubble.id = 'typingIndicator';
-  typingBubble.className = 'flex justify-start';
-  typingBubble.innerHTML = `<div class="chat-bubble-bot p-3 text-xs text-slate-400 italic">Sofia está digitando...</div>`;
-  container.appendChild(typingBubble);
+  const typingDiv = document.createElement('div');
+  typingDiv.className = 'flex justify-start';
+  typingDiv.id = 'simTyping';
+  typingDiv.innerHTML = `<div class="chat-bubble-bot p-2.5 text-[11px] text-slate-400 italic">Sofia está digitando...</div>`;
+  container.appendChild(typingDiv);
   container.scrollTop = container.scrollHeight;
 
   try {
     const res = await fetch('/api/chat/simulate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, clientPhone: '5511999990000', clientName: 'Você (Simulador)' })
+      body: JSON.stringify({ message: msg, clientPhone: '5511999990000', clientName: 'Você (Simulador)' })
     });
     const data = await res.json();
-    typingBubble.remove();
+    typingDiv.remove();
 
-    const botBubble = document.createElement('div');
-    botBubble.className = 'flex justify-start';
-    botBubble.innerHTML = `<div class="chat-bubble-bot p-3 max-w-[80%] text-sm whitespace-pre-wrap">${data.reply || 'Sem resposta.'}</div>`;
-    container.appendChild(botBubble);
+    const botDiv = document.createElement('div');
+    botDiv.className = 'flex justify-start';
+    botDiv.innerHTML = `<div class="chat-bubble-bot p-3 text-xs max-w-[85%] whitespace-pre-wrap leading-relaxed">${data.reply || 'Sem resposta.'}</div>`;
+    container.appendChild(botDiv);
     container.scrollTop = container.scrollHeight;
 
-    // Atualiza tabela de agendamentos caso tenha sido feito novo agendamento
+    // Atualiza agendamentos caso tenha sido criado
     fetchAppointments();
+    fetchDashboardKPIs();
   } catch (err) {
-    typingBubble.remove();
-    const errorBubble = document.createElement('div');
-    errorBubble.className = 'flex justify-start';
-    errorBubble.innerHTML = `<div class="chat-bubble-bot p-3 max-w-[80%] text-sm text-rose-400">Erro ao comunicar com a secretária virtual.</div>`;
-    container.appendChild(errorBubble);
+    typingDiv.remove();
+    const errDiv = document.createElement('div');
+    errDiv.className = 'flex justify-start';
+    errDiv.innerHTML = `<div class="chat-bubble-bot p-3 text-xs text-rose-400">Erro ao comunicar com a assistente.</div>`;
+    container.appendChild(errDiv);
+  }
+}
+
+// --- CONFIGURAÇÕES ---
+async function fetchSettings() {
+  try {
+    const res = await fetch('/api/establishment');
+    const est = await res.json();
+    document.getElementById('cfgSalonName').value = est.name || '';
+    document.getElementById('cfgSecretaryName').value = est.secretaryName || '';
+    document.getElementById('cfgAddress').value = est.address || '';
+    document.getElementById('cfgPhone').value = est.phone || '';
+    document.getElementById('cfgTransferPhone').value = est.transferToHumanPhone || '';
+    document.getElementById('cfgCompletionMode').value = est.completionMode || 'AUTO';
+    document.getElementById('cfgLowRating').value = est.lowRatingThreshold || 2;
+  } catch (err) {
+    console.error('Erro ao carregar configurações:', err);
+  }
+}
+
+async function handleSaveEstablishment(e) {
+  e.preventDefault();
+  const geminiApiKey = document.getElementById('inputGeminiKey').value;
+  const body = {
+    name: document.getElementById('cfgSalonName').value,
+    secretaryName: document.getElementById('cfgSecretaryName').value,
+    address: document.getElementById('cfgAddress').value,
+    phone: document.getElementById('cfgPhone').value,
+    transferToHumanPhone: document.getElementById('cfgTransferPhone').value,
+    completionMode: document.getElementById('cfgCompletionMode').value,
+    lowRatingThreshold: parseInt(document.getElementById('cfgLowRating').value)
+  };
+  if (geminiApiKey) body.geminiApiKey = geminiApiKey;
+
+  try {
+    const res = await fetch('/api/establishment', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (res.ok) {
+      alert('Configurações atualizadas com sucesso!');
+      document.getElementById('inputGeminiKey').value = '';
+      fetchStatus();
+      fetchSettings();
+    }
+  } catch (e) {
+    alert('Erro ao salvar.');
   }
 }

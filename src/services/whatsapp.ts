@@ -2,14 +2,14 @@ import makeWASocket, {
   DisconnectReason,
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
-  WASocket,
-  proto
+  WASocket
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import QRCode from 'qrcode';
 import qrcodeTerminal from 'qrcode-terminal';
 import { config } from '../config.js';
 import { aiService } from './ai.js';
+import { storage } from '../db/storage.js';
 import { WhatsAppState } from '../types.js';
 
 export class WhatsAppService {
@@ -24,6 +24,10 @@ export class WhatsAppService {
     return { ...this.state };
   }
 
+  public isConnected(): boolean {
+    return this.state.state === 'connected';
+  }
+
   public async start(): Promise<void> {
     if (this.isConnecting) return;
     this.isConnecting = true;
@@ -36,15 +40,14 @@ export class WhatsAppService {
 
       const { state, saveCreds } = await useMultiFileAuthState(config.authInfoPath);
       const { version } = await fetchLatestBaileysVersion();
-
       const logger = pino({ level: 'silent' });
 
       this.sock = makeWASocket({
         version,
         logger,
         auth: state,
-        printQRInTerminal: false, // Geramos manualmente para melhor controle
-        browser: ['Secretária Virtual', 'Chrome', '1.0.0']
+        printQRInTerminal: false,
+        browser: ['Salão de Beleza AI', 'Chrome', '1.0.0']
       });
 
       this.sock.ev.on('creds.update', saveCreds);
@@ -57,7 +60,6 @@ export class WhatsAppService {
           console.log('  📲 ESCANEIE O QR CODE NO SEU WHATSAPP');
           console.log('=========================================\n');
           qrcodeTerminal.generate(qr, { small: true });
-          console.log('Ou abra o painel web em http://localhost:' + config.port);
 
           try {
             const dataUrl = await QRCode.toDataURL(qr);
@@ -73,8 +75,8 @@ export class WhatsAppService {
 
         if (connection === 'open') {
           const userPhone = this.sock?.user?.id?.split(':')[0] || 'Desconhecido';
-          console.log(`\n✅ Conexão com WhatsApp estabelecida com sucesso!`);
-          console.log(`📞 Conectado como: ${userPhone}\n`);
+          console.log(`\n✅ WhatsApp conectado com sucesso!`);
+          console.log(`📞 Linha do Salão: ${userPhone}\n`);
 
           this.state = {
             state: 'connected',
@@ -89,7 +91,7 @@ export class WhatsAppService {
           const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
           const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
 
-          console.log(`[WhatsApp] Conexão encerrada (código: ${statusCode}). Reconectar: ${shouldReconnect}`);
+          console.log(`[WhatsApp] Sessão desconectada (código ${statusCode}). Reconectar: ${shouldReconnect}`);
 
           this.state = {
             state: 'disconnected',
@@ -99,7 +101,6 @@ export class WhatsAppService {
           this.isConnecting = false;
 
           if (shouldReconnect) {
-            console.log('[WhatsApp] Tentando reconectar em 5 segundos...');
             setTimeout(() => this.start(), 5000);
           }
         }
@@ -110,22 +111,19 @@ export class WhatsAppService {
         if (m.type !== 'notify') return;
 
         for (const msg of m.messages) {
-          // Ignora mensagens enviadas por nós mesmos ou de status
           if (msg.key.fromMe || !msg.message || msg.key.remoteJid === 'status@broadcast') {
             continue;
           }
 
-          // Apenas mensagens privadas (não responde em grupos a menos que seja desejado)
           const remoteJid = msg.key.remoteJid;
           if (!remoteJid || remoteJid.endsWith('@g.us')) {
-            continue;
+            continue; // Ignora grupos
           }
 
           const clientPhone = remoteJid.replace('@s.whatsapp.net', '');
           const clientName = msg.pushName || 'Cliente';
 
-          // Extrai o texto da mensagem
-          const messageText = 
+          const messageText =
             msg.message.conversation ||
             msg.message.extendedTextMessage?.text ||
             '';
@@ -136,19 +134,26 @@ export class WhatsAppService {
 
           console.log(`[WhatsApp] Mensagem de ${clientName} (${clientPhone}): "${messageText}"`);
 
+          // Verifica se este número está com atendimento humano assumido
+          if (storage.isHumanInterventionActive(clientPhone)) {
+            console.log(`[WhatsApp] Conversa com ${clientPhone} sob intervenção humana. A IA não interferirá.`);
+            storage.saveConversationMessage(clientPhone, 'user', messageText);
+            continue;
+          }
+
           try {
+            // Mostra presença digitando no WhatsApp
             if (this.sock) {
-              // Mostra presença digitando
               await this.sock.presenceSubscribe(remoteJid);
               await this.sock.sendPresenceUpdate('composing', remoteJid);
+            }
 
-              // Processa resposta com o Gemini
-              const replyText = await aiService.processMessage(clientPhone, messageText, clientName);
+            // Processa com a IA (Function Calling)
+            const replyText = await aiService.processMessage(clientPhone, messageText, clientName);
 
-              // Pausa a digitação
+            // Pausa digitação e envia resposta
+            if (this.sock) {
               await this.sock.sendPresenceUpdate('paused', remoteJid);
-
-              // Envia resposta no WhatsApp
               await this.sock.sendMessage(remoteJid, { text: replyText });
               console.log(`[WhatsApp] Resposta enviada para ${clientPhone}`);
             }
@@ -159,7 +164,7 @@ export class WhatsAppService {
       });
 
     } catch (error) {
-      console.error('[WhatsApp] Falha ao inicializar socket Baileys:', error);
+      console.error('[WhatsApp] Falha ao inicializar Baileys:', error);
       this.isConnecting = false;
       this.state = {
         state: 'disconnected',
@@ -168,13 +173,33 @@ export class WhatsAppService {
     }
   }
 
+  // Enviar mensagem ativa (Lembretes, Pesquisas, Avisos)
+  public async sendMessageToClient(phone: string, text: string): Promise<boolean> {
+    const clean = phone.replace(/\D/g, '');
+    const remoteJid = `${clean}@s.whatsapp.net`;
+
+    if (this.sock && this.state.state === 'connected') {
+      try {
+        await this.sock.sendMessage(remoteJid, { text });
+        storage.saveConversationMessage(phone, 'assistant', text);
+        return true;
+      } catch (err) {
+        console.error(`[WhatsApp] Falha ao enviar mensagem para ${phone}:`, err);
+        return false;
+      }
+    } else {
+      // Loga caso não conectado
+      console.log(`[WhatsApp] Mensagem agendada/disparada para ${phone} (Offline): "${text}"`);
+      storage.saveConversationMessage(phone, 'assistant', text);
+      return false;
+    }
+  }
+
   public async disconnect(): Promise<void> {
     if (this.sock) {
       try {
         await this.sock.logout();
-      } catch (e) {
-        // Ignora erro de logout se já desconectado
-      }
+      } catch (e) {}
       this.sock = null;
     }
     this.state = {
