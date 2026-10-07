@@ -46,6 +46,7 @@ function setTab(tabId) {
   if (tabId === 'clients') fetchClients();
   if (tabId === 'financial') fetchFinancialData();
   if (tabId === 'reviews') fetchReviews();
+  if (tabId === 'campaigns') loadCampaigns();
 
   if (window.lucide) window.lucide.createIcons();
 }
@@ -678,3 +679,145 @@ async function handleSaveEstablishment(e) {
     alert('Erro ao salvar.');
   }
 }
+
+// --- PROMOÇÕES RELÂMPAGO & CAMPANHAS ANTI-BAN ---
+let lastPreparedCampaignId = null;
+
+async function loadCampaigns() {
+  try {
+    const res = await fetch('/api/campaigns');
+    const campaigns = await res.json();
+    const container = document.getElementById('campaignsList');
+    if (!container) return;
+
+    if (!campaigns || campaigns.length === 0) {
+      container.innerHTML = '<p class="text-xs text-slate-500">Nenhuma campanha registrada ainda.</p>';
+      return;
+    }
+
+    container.innerHTML = campaigns.slice().reverse().map(c => {
+      const isRunning = c.status === 'EM_ANDAMENTO';
+      const isDone = c.status === 'CONCLUIDO';
+      const isDraft = c.status === 'RASCUNHO';
+      const statusColor = isRunning ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
+        isDone ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' :
+        'bg-slate-800 text-slate-400 border-slate-700';
+
+      const pct = c.totalRecipients > 0 ? Math.round((c.sentCount / c.totalRecipients) * 100) : 0;
+
+      return `
+        <div class="glass-card p-4 rounded-xl border border-slate-800 space-y-3">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-slate-200">${c.title || 'Promoção Relâmpago'}</span>
+                <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full border ${statusColor}">${c.status}</span>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-0.5">Criada em: ${new Date(c.createdAt).toLocaleString('pt-BR')}</p>
+            </div>
+            <div class="flex items-center gap-2">
+              ${isDraft ? `
+                <button onclick="handleStartCampaignDirectly('${c.id}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5">
+                  <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                  <span>Disparar Agora</span>
+                </button>
+              ` : ''}
+              ${isRunning ? `
+                <button onclick="handleCancelCampaign('${c.id}')" class="px-3 py-1.5 bg-rose-600/80 hover:bg-rose-600 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5">
+                  <i data-lucide="square" class="w-3.5 h-3.5"></i>
+                  <span>Pausar</span>
+                </button>
+              ` : ''}
+            </div>
+          </div>
+
+          <div class="p-2.5 bg-slate-950 rounded-lg text-xs text-slate-300 border border-slate-800/60">
+            <span class="text-slate-500 block text-[10px] uppercase font-bold">Oferta:</span>
+            ${c.rawDescription}
+          </div>
+
+          <!-- Barra de Progresso Anti-Ban -->
+          <div class="space-y-1">
+            <div class="flex justify-between text-[11px] text-slate-400">
+              <span>Progresso dos envios: <b>${c.sentCount} / ${c.totalRecipients} clientes</b></span>
+              <span>${pct}% concluído</span>
+            </div>
+            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+              <div class="bg-gradient-to-r from-purple-500 to-emerald-400 h-full rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    if (window.lucide) window.lucide.createIcons();
+  } catch (err) {
+    console.error('Erro ao carregar campanhas:', err);
+  }
+}
+
+async function handlePrepareCampaign() {
+  const title = document.getElementById('campTitle').value;
+  const rawDescription = document.getElementById('campRawDesc').value;
+  const minDelay = parseInt(document.getElementById('campMinDelay').value) || 25;
+  const maxDelay = parseInt(document.getElementById('campMaxDelay').value) || 55;
+
+  if (!rawDescription || rawDescription.trim().length === 0) {
+    alert('Por favor, digite o texto ou condição da promoção.');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/campaigns/prepare', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, rawDescription, minDelay, maxDelay })
+    });
+    const data = await res.json();
+    if (data.success) {
+      lastPreparedCampaignId = data.campaign.id;
+      document.getElementById('previewClientCount').innerText = `${data.totalEligibleClients} clientes na base`;
+      document.getElementById('previewMessageContent').innerText = data.previewMessage;
+      document.getElementById('boxCampaignPreview').classList.remove('hidden');
+      loadCampaigns();
+    } else {
+      alert(data.error || 'Erro ao preparar campanha.');
+    }
+  } catch (e) {
+    alert('Falha na comunicação com o servidor.');
+  }
+}
+
+async function handleStartPreparedCampaign() {
+  if (!lastPreparedCampaignId) return;
+  await handleStartCampaignDirectly(lastPreparedCampaignId);
+  document.getElementById('boxCampaignPreview').classList.add('hidden');
+}
+
+async function handleStartCampaignDirectly(id) {
+  try {
+    const res = await fetch(`/api/campaigns/${id}/start`, { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      alert('Campanha iniciada com sucesso! Os envios estão ocorrendo em segundo plano com proteção anti-ban.');
+      loadCampaigns();
+    }
+  } catch (e) {
+    alert('Erro ao iniciar campanha.');
+  }
+}
+
+async function handleCancelCampaign(id) {
+  if (!confirm('Deseja interromper o envio desta campanha?')) return;
+  try {
+    const res = await fetch(`/api/campaigns/${id}/cancel`, { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      alert('Campanha interrompida.');
+      loadCampaigns();
+    }
+  } catch (e) {
+    alert('Erro ao cancelar campanha.');
+  }
+}
+

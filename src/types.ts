@@ -235,6 +235,34 @@ export interface ChatMessage {
   timestamp: string;
 }
 
+export interface CampaignRecipient {
+  clientId: string;
+  clientName: string;
+  phone: string;
+  status: 'PENDENTE' | 'ENVIADO' | 'ERRO';
+  sentMessage?: string;
+  sentAt?: string;
+  error?: string;
+}
+
+export interface PromotionCampaign {
+  id: string;
+  establishmentId: string;
+  title: string;
+  rawDescription: string;
+  messageTemplate: string;
+  status: 'RASCUNHO' | 'EM_ANDAMENTO' | 'CONCLUIDO' | 'CANCELADO';
+  totalRecipients: number;
+  sentCount: number;
+  failedCount: number;
+  minDelaySeconds: number;
+  maxDelaySeconds: number;
+  recipients: CampaignRecipient[];
+  createdAt: string;
+  startedAt?: string;
+  completedAt?: string;
+}
+
 export interface DatabaseSchema {
   establishments: Establishment[];
   users: User[];
@@ -248,6 +276,7 @@ export interface DatabaseSchema {
   auditLogs: AuditLog[];
   conversations: Record<string, ChatMessage[]>;
   humanInterventionFlags: Record<string, boolean>; // telefone -> true se humano assumiu
+  campaigns?: PromotionCampaign[];
 }
 
 export interface WhatsAppState {

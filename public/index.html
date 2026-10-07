@@ -95,6 +95,10 @@
         <i data-lucide="dollar-sign" class="w-4 h-4"></i>
         <span>Financeiro & DRE</span>
       </button>
+      <button onclick="setTab('campaigns')" id="nav-campaigns" class="nav-btn flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent">
+        <i data-lucide="megaphone" class="w-4 h-4"></i>
+        <span>Promoções Relâmpago</span>
+      </button>
       <button onclick="setTab('reviews')" id="nav-reviews" class="nav-btn flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent">
         <i data-lucide="star" class="w-4 h-4"></i>
         <span>Avaliações</span>
@@ -541,6 +545,116 @@
             </button>
           </div>
         </form>
+      </section>
+
+      <!-- ABA: PROMOÇÕES RELÂMPAGO & CAMPANHAS ANTI-BAN -->
+      <section id="tab-campaigns" class="tab-pane hidden space-y-6">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h2 class="text-xl font-bold tracking-tight flex items-center gap-2">
+              <span>Disparador de Promoções Relâmpago</span>
+              <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Proteção Anti-Ban Ativa</span>
+            </h2>
+            <p class="text-xs text-slate-400">Lance promoções via WhatsApp para sua base de clientes com intervalos aleatórios, Spintax e simulação humana.</p>
+          </div>
+          <button onclick="loadCampaigns()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs flex items-center gap-2">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span>Atualizar</span>
+          </button>
+        </div>
+
+        <!-- Banner Explicativo Anti-Ban -->
+        <div class="p-4 rounded-xl bg-purple-950/30 border border-purple-800/40 text-xs text-slate-300 space-y-2">
+          <div class="flex items-center gap-2 text-purple-300 font-semibold">
+            <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+            <span>Como o Sistema Protege o seu Chip contra Banimentos:</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 text-slate-400">
+            <div class="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/60">
+              <span class="font-medium text-slate-200 block mb-0.5">⏱️ Intervalos Randômicos</span>
+              Pausas aleatórias de 25s a 55s entre cada mensagem para evitar padrão mecânico de robô.
+            </div>
+            <div class="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/60">
+              <span class="font-medium text-slate-200 block mb-0.5">✍️ Textos Personalizados (Spintax)</span>
+              Cada cliente recebe variações de saudações e assinaturas, gerando hashes de mensagem diferentes.
+            </div>
+            <div class="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/60">
+              <span class="font-medium text-slate-200 block mb-0.5">⌨️ Digitação Humana</span>
+              Simula o status "digitando..." por 3 a 6 segundos no WhatsApp antes do disparo.
+            </div>
+          </div>
+        </div>
+
+        <!-- Formulário para Criar/Lançar Campanha -->
+        <div class="glass-card p-5 rounded-2xl border border-slate-800 space-y-4">
+          <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+            <i data-lucide="plus-circle" class="w-4 h-4 text-purple-400"></i>
+            <span>Criar Nova Promoção Relâmpago</span>
+          </h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div>
+              <label class="block font-semibold text-slate-300 mb-1">Título da Promoção (Interno)</label>
+              <input type="text" id="campTitle" placeholder="Ex: Promoção Progressiva Especial" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-slate-100">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block font-semibold text-slate-300 mb-1">Pausa Mínima (segundos)</label>
+                <input type="number" id="campMinDelay" value="25" min="15" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-slate-100">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-300 mb-1">Pausa Máxima (segundos)</label>
+                <input type="number" id="campMaxDelay" value="55" min="20" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-slate-100">
+              </div>
+            </div>
+          </div>
+
+          <div class="text-xs">
+            <label class="block font-semibold text-slate-300 mb-1">Texto da Oferta / Condição Especial</label>
+            <textarea id="campRawDesc" rows="3" placeholder="Ex: Progressiva com 30% de desconto hoje e amanhã com a Maria! Restam apenas 3 vagas disponíveis." class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-slate-100"></textarea>
+            <p class="text-[11px] text-slate-500 mt-1">Dica: Você também pode simplesmente mandar um áudio ou texto para a Sofia no WhatsApp dizendo: *"Sofia, quero lançar uma promoção relâmpago..."* que ela prepara tudo para você!</p>
+          </div>
+
+          <div class="flex items-center gap-3 pt-1">
+            <button onclick="handlePrepareCampaign()" class="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold flex items-center gap-2">
+              <i data-lucide="eye" class="w-4 h-4"></i>
+              <span>Gerar Prévia & Preparar Campanha</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Box de Prévia da Campanha Preparada -->
+        <div id="boxCampaignPreview" class="hidden glass-card p-5 rounded-2xl border border-purple-500/30 bg-purple-950/20 space-y-3">
+          <div class="flex justify-between items-center">
+            <h4 class="text-sm font-bold text-purple-300 flex items-center gap-2">
+              <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+              <span>Campanha Preparada com Sucesso</span>
+            </h4>
+            <span id="previewClientCount" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-purple-500/20 text-purple-200 border border-purple-500/30">
+              0 clientes na base
+            </span>
+          </div>
+
+          <div class="text-xs text-slate-300">
+            <p class="text-slate-400 mb-1.5 font-medium">Exemplo de Mensagem Personalizada que a cliente receberá:</p>
+            <div id="previewMessageContent" class="p-3.5 bg-slate-950 border border-slate-800 rounded-xl whitespace-pre-wrap font-sans text-slate-200"></div>
+          </div>
+
+          <div class="flex items-center justify-end gap-3 pt-2">
+            <button onclick="document.getElementById('boxCampaignPreview').classList.add('hidden')" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs">Cancelar</button>
+            <button id="btnStartCampaign" onclick="handleStartPreparedCampaign()" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-2">
+              <i data-lucide="send" class="w-4 h-4"></i>
+              <span>Confirmar & Iniciar Envios Seguros</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Lista de Campanhas Anteriores / Ativas -->
+        <div class="space-y-3">
+          <h3 class="text-sm font-bold text-slate-200">Histórico de Campanhas</h3>
+          <div id="campaignsList" class="space-y-3">
+            <p class="text-xs text-slate-500">Nenhuma campanha registrada ainda.</p>
+          </div>
+        </div>
       </section>
 
     </main>

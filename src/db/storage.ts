@@ -15,7 +15,8 @@ import {
   User,
   WorkingDaySchedule,
   ChatMessage,
-  FinancialSnapshot
+  FinancialSnapshot,
+  PromotionCampaign
 } from '../types.js';
 
 const PILOT_ESTABLISHMENT_ID = 'est_pilot_01';
@@ -374,7 +375,8 @@ class StorageManager {
             revenues: parsed.revenues || [],
             auditLogs: parsed.auditLogs || [],
             conversations: parsed.conversations || {},
-            humanInterventionFlags: parsed.humanInterventionFlags || {}
+            humanInterventionFlags: parsed.humanInterventionFlags || {},
+            campaigns: parsed.campaigns || []
           };
         }
       }
@@ -395,7 +397,8 @@ class StorageManager {
       revenues: [],
       auditLogs: [],
       conversations: {},
-      humanInterventionFlags: {}
+      humanInterventionFlags: {},
+      campaigns: []
     };
 
     // Cria alguns agendamentos demonstrativos
@@ -1244,6 +1247,38 @@ class StorageManager {
       this.db.conversations[clean] = this.db.conversations[clean].slice(-40);
     }
     this.saveData(this.db);
+  }
+
+  // --- CAMPANHAS DE PROMOÇÃO RELÂMPAGO ---
+  public getCampaigns(establishmentId: string = PILOT_ESTABLISHMENT_ID): PromotionCampaign[] {
+    return (this.db.campaigns || []).filter(c => c.establishmentId === establishmentId);
+  }
+
+  public getCampaignById(id: string): PromotionCampaign | undefined {
+    return (this.db.campaigns || []).find(c => c.id === id);
+  }
+
+  public createCampaign(campaign: Omit<PromotionCampaign, 'id' | 'createdAt' | 'sentCount' | 'failedCount'>): PromotionCampaign {
+    if (!this.db.campaigns) this.db.campaigns = [];
+    const newCamp: PromotionCampaign = {
+      ...campaign,
+      id: 'camp_' + Math.random().toString(36).substring(2, 9),
+      sentCount: 0,
+      failedCount: 0,
+      createdAt: new Date().toISOString()
+    };
+    this.db.campaigns.push(newCamp);
+    this.saveData(this.db);
+    return newCamp;
+  }
+
+  public updateCampaign(id: string, updates: Partial<PromotionCampaign>): PromotionCampaign | null {
+    if (!this.db.campaigns) this.db.campaigns = [];
+    const idx = this.db.campaigns.findIndex(c => c.id === id);
+    if (idx === -1) return null;
+    this.db.campaigns[idx] = { ...this.db.campaigns[idx], ...updates };
+    this.saveData(this.db);
+    return this.db.campaigns[idx];
   }
 }
 

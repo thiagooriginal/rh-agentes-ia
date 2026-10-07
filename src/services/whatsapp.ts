@@ -21,6 +21,7 @@ export class WhatsAppService {
   private isConnecting: boolean = false;
   private hasPrintedTerminalQR: boolean = false;
   private recentBotReplies: Set<string> = new Set();
+  private sentBotMessageIds: Set<string> = new Set();
 
   public getStatus(): WhatsAppState {
     return { ...this.state };
@@ -116,9 +117,13 @@ export class WhatsAppService {
 
       // Trata mensagens recebidas com filtro estrito de segurança
       this.sock.ev.on('messages.upsert', async (m) => {
-        if (m.type !== 'notify') return;
+        // Aceita 'notify' (mensagens normais de clientes) e 'append' (mensagens sincronizadas / auto-conversa)
+        if (m.type !== 'notify' && m.type !== 'append') return;
 
         for (const msg of m.messages) {
+          if (!msg.message) continue;
+          if (msg.key.id && this.sentBotMessageIds.has(msg.key.id)) continue;
+
           const remoteJid = msg.key.remoteJid;
           if (!remoteJid) continue;
 
@@ -129,17 +134,19 @@ export class WhatsAppService {
             remoteJid.endsWith('@newsletter') ||
             msg.key.participant
           ) {
-            // Ignora silenciosamente grupos
             continue;
           }
 
-          const rawClientPhone = remoteJid.replace('@s.whatsapp.net', '');
-          const cleanClientPhone = rawClientPhone.replace(/\D/g, '');
-          const clientName = msg.pushName || 'Você';
-
+          // Extração segura do conteúdo textual
           const messageText =
             msg.message?.conversation ||
             msg.message?.extendedTextMessage?.text ||
+            msg.message?.ephemeralMessage?.message?.conversation ||
+            msg.message?.ephemeralMessage?.message?.extendedTextMessage?.text ||
+            msg.message?.viewOnceMessage?.message?.conversation ||
+            msg.message?.viewOnceMessage?.message?.extendedTextMessage?.text ||
+            msg.message?.viewOnceMessageV2?.message?.conversation ||
+            msg.message?.viewOnceMessageV2?.message?.extendedTextMessage?.text ||
             '';
 
           if (!messageText || messageText.trim().length === 0) {
@@ -151,22 +158,26 @@ export class WhatsAppService {
             continue;
           }
 
+          // Extração correta do ID/telefone sem o sufixo de dispositivo (:49, :50) nem domínio (@lid, @s.whatsapp.net)
+          const userPart = remoteJid.split('@')[0].split(':')[0];
+          const cleanClientPhone = userPart.replace(/\D/g, '');
+          const clientName = msg.pushName || 'Você';
+
           // 2. REGRA ESTRITA: Filtrar apenas o seu próprio número (incluindo LID do WhatsApp)
-          const botPhone = (this.sock?.user?.id?.split(':')[0] || '').replace(/\D/g, '');
-          const botLid = (this.sock?.user?.lid?.split(':')[0] || '').replace(/\D/g, '');
+          const botPhone = (this.sock?.user?.id?.split('@')[0]?.split(':')[0] || '').replace(/\D/g, '');
+          const botLid = (this.sock?.user?.lid?.split('@')[0]?.split(':')[0] || '').replace(/\D/g, '');
           const establishment = storage.getEstablishment();
           const adminPhone = (establishment.adminNotificationPhone || config.adminPhone || '').replace(/\D/g, '');
 
           const isMatchingPhone = (p1: string, p2: string): boolean => {
             if (!p1 || !p2) return false;
             if (p1 === p2) return true;
-            // Se os últimos 8 dígitos forem idênticos (tolerância a DDD/nono dígito)
             const s1 = p1.slice(-8);
             const s2 = p2.slice(-8);
             return s1.length >= 8 && s1 === s2;
           };
 
-          console.log('[WhatsApp Evento]', { remoteJid, cleanPhone: cleanClientPhone, fromMe: msg.key.fromMe, botPhone, botLid, text: messageText });
+          console.log('[WhatsApp Evento]', { remoteJid, cleanClientPhone, fromMe: msg.key.fromMe, type: m.type, botPhone, botLid, text: messageText });
 
           // Verifica se é o próprio usuário (via número normal ou via LID no chat com você mesmo)
           const isSelf = isMatchingPhone(cleanClientPhone, botPhone) || (botLid && cleanClientPhone === botLid);
@@ -177,7 +188,7 @@ export class WhatsAppService {
             continue;
           }
 
-          // Se for mensagem enviada por si mesmo (fromMe), aceita no chat consigo mesmo (self-chat)
+          // Se for mensagem enviada por si mesmo (fromMe), aceita APENAS no chat consigo mesmo (self-chat)
           if (msg.key.fromMe && !isSelf) {
             continue;
           }
@@ -209,8 +220,23 @@ export class WhatsAppService {
 
             if (this.sock) {
               await this.sock.sendPresenceUpdate('paused', remoteJid);
-              await this.sock.sendMessage(remoteJid, { text: replyText });
-              console.log(`[WhatsApp] Resposta enviada com sucesso para seu número!`);
+              
+              // Se o JID for do tipo @lid (identificador interno de dispositivo) ou self-chat,
+              // envia obrigatoriamente para o número real @s.whatsapp.net para aparecer no app do celular
+              const targetJid = (isSelf || remoteJid.endsWith('@lid')) 
+                ? `${effectivePhone}@s.whatsapp.net` 
+                : remoteJid;
+
+              console.log(`[WhatsApp 📤 Envio] Enviando para ${targetJid}: "${replyText.slice(0, 50)}..."`);
+              const sent = await this.sock.sendMessage(targetJid, { text: replyText });
+              if (sent?.key?.id) {
+                this.sentBotMessageIds.add(sent.key.id);
+                if (this.sentBotMessageIds.size > 200) {
+                  const first = this.sentBotMessageIds.values().next().value;
+                  if (first) this.sentBotMessageIds.delete(first);
+                }
+              }
+              console.log(`[WhatsApp] Resposta enviada com sucesso para ${targetJid}!`);
             }
           } catch (err) {
             console.error(`[WhatsApp] Erro ao responder ${cleanClientPhone}:`, err);
@@ -235,7 +261,11 @@ export class WhatsAppService {
 
     if (this.sock && this.state.state === 'connected') {
       try {
-        await this.sock.sendMessage(remoteJid, { text });
+        const sent = await this.sock.sendMessage(remoteJid, { text });
+        if (sent?.key?.id) {
+          this.sentBotMessageIds.add(sent.key.id);
+        }
+        this.recentBotReplies.add(text.trim());
         storage.saveConversationMessage(phone, 'assistant', text);
         return true;
       } catch (err) {
@@ -244,6 +274,46 @@ export class WhatsAppService {
       }
     } else {
       console.log(`[WhatsApp] Mensagem para ${phone} (Offline): "${text}"`);
+      storage.saveConversationMessage(phone, 'assistant', text);
+      return false;
+    }
+  }
+
+  // Envio de promoção com simulação de presença humana e proteção Anti-Ban
+  public async sendPromotionMessageWithAntiBan(
+    phone: string,
+    text: string,
+    typingSeconds: number = 4
+  ): Promise<boolean> {
+    const clean = phone.replace(/\D/g, '');
+    const remoteJid = `${clean}@s.whatsapp.net`;
+
+    if (this.sock && this.state.state === 'connected') {
+      try {
+        // 1. Simula presença humana: "digitando..."
+        await this.sock.presenceSubscribe(remoteJid);
+        await this.sock.sendPresenceUpdate('composing', remoteJid);
+        
+        // Aguarda delay de digitação proporcional
+        await new Promise(r => setTimeout(r, Math.max(2000, typingSeconds * 1000)));
+        
+        await this.sock.sendPresenceUpdate('paused', remoteJid);
+
+        // 2. Dispara a mensagem
+        const sent = await this.sock.sendMessage(remoteJid, { text });
+        if (sent?.key?.id) {
+          this.sentBotMessageIds.add(sent.key.id);
+        }
+        this.recentBotReplies.add(text.trim());
+        storage.saveConversationMessage(phone, 'assistant', text);
+        console.log(`[WhatsApp Anti-Ban] ✅ Mensagem promocional enviada para ${phone}`);
+        return true;
+      } catch (err) {
+        console.error(`[WhatsApp Anti-Ban] Falha ao enviar para ${phone}:`, err);
+        return false;
+      }
+    } else {
+      console.log(`[WhatsApp Anti-Ban] Modo Simulado (Offline) para ${phone}: "${text.slice(0, 30)}..."`);
       storage.saveConversationMessage(phone, 'assistant', text);
       return false;
     }

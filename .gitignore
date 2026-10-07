@@ -5,3 +5,4 @@ auth_info_baileys/
 data/database.json
 *.log
 .DS_Store
+google_credentials.json

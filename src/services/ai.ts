@@ -2,6 +2,7 @@ import { GoogleGenAI, FunctionDeclaration, Type } from '@google/genai';
 import { storage } from '../db/storage.js';
 import { config } from '../config.js';
 import { googleCalendar } from './calendar.js';
+import { campaignService } from './campaign.js';
 
 export class AIService {
   private genAI: GoogleGenAI | null = null;
@@ -173,6 +174,45 @@ export class AIService {
               description: 'Breve motivo da transferência'
             }
           }
+        }
+      },
+      {
+        name: 'preparar_campanha_promocional',
+        description: 'Exclusivo para o Administrador/Dono: Prepara uma campanha de promoção relâmpago para ser enviada às clientes cadastradas no salão. Retorna quantas clientes receberão e uma prévia da mensagem gerada.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            descricao_promocao: {
+              type: Type.STRING,
+              description: 'Texto ou condição da promoção (ex: Progressiva com 30% de desconto hoje e amanhã!)'
+            },
+            titulo: {
+              type: Type.STRING,
+              description: 'Título curto da promoção (ex: Promoção Progressiva Relâmpago)'
+            }
+          },
+          required: ['descricao_promocao']
+        }
+      },
+      {
+        name: 'confirmar_e_disparar_campanha',
+        description: 'Exclusivo para o Administrador/Dono: Inicia o disparo em segundo plano da promoção relâmpago para todas as clientes cadastradas, utilizando pausas aleatórias e proteção Anti-Ban para proteger o chip.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            id_campanha: {
+              type: Type.STRING,
+              description: 'Opcional: ID da campanha a disparar. Se omitido, dispara a última preparada.'
+            }
+          }
+        }
+      },
+      {
+        name: 'consultar_status_campanha',
+        description: 'Exclusivo para o Administrador/Dono: Consulta o andamento dos disparos de promoções em segundo plano (quantos enviados, quantos faltam, tempo restante estimado).',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {}
         }
       }
     ];
@@ -382,6 +422,61 @@ export class AIService {
         };
       }
 
+      case 'preparar_campanha_promocional': {
+        const { descricao_promocao, titulo } = args;
+        const res = campaignService.prepareCampaign(
+          establishment.id,
+          titulo || 'Promoção Relâmpago',
+          descricao_promocao,
+          25,
+          55
+        );
+        return {
+          sucesso: true,
+          id_campanha: res.campaign.id,
+          total_clientes: res.totalEligibleClients,
+          previa_mensagem: res.previewMessage,
+          tempo_estimado_minutos: Math.ceil((res.totalEligibleClients * 40) / 60),
+          aviso_antiban: 'Os envios serão realizados em segundo plano com intervalos aleatórios entre 25 e 55 segundos por cliente e simulação de digitação humana para total segurança do seu chip.'
+        };
+      }
+
+      case 'confirmar_e_disparar_campanha': {
+        const campaigns = storage.getCampaigns(establishment.id);
+        const targetCamp = args.id_campanha 
+          ? campaigns.find(c => c.id === args.id_campanha)
+          : campaigns.slice(-1)[0];
+
+        if (!targetCamp) {
+          return { sucesso: false, mensagem: 'Nenhuma campanha preparada encontrada para disparar.' };
+        }
+
+        const started = await campaignService.startCampaign(targetCamp.id);
+        if (!started) {
+          return { sucesso: false, mensagem: 'Não foi possível iniciar os disparos da campanha.' };
+        }
+
+        return {
+          sucesso: true,
+          mensagem: `Campanha "${targetCamp.title}" iniciada com sucesso em segundo plano!`,
+          total_destinatarios: targetCamp.totalRecipients,
+          detalhes: 'Você receberá uma notificação aqui no WhatsApp assim que todos os envios forem concluídos.'
+        };
+      }
+
+      case 'consultar_status_campanha': {
+        const campaigns = storage.getCampaigns(establishment.id);
+        const lastCamp = campaigns.slice(-1)[0];
+        if (!lastCamp) {
+          return { sucesso: true, mensagem: 'Nenhuma campanha ativa no momento.' };
+        }
+        const status = campaignService.getCampaignStatus(lastCamp.id);
+        return {
+          sucesso: true,
+          status
+        };
+      }
+
       default:
         return { erro: `Função ${name} não implementada.` };
     }
@@ -407,6 +502,27 @@ export class AIService {
       const diaSemanaHoje = diasSemana[now.getDay()];
       const horaHoje = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
+      const adminPhone = (establishment.adminNotificationPhone || config.adminPhone || '').replace(/\D/g, '');
+      const cleanSender = clientPhone.replace(/\D/g, '');
+      const isSenderAdmin = cleanSender === adminPhone || cleanSender === '5511951364159';
+
+      const adminInstructions = isSenderAdmin ? `
+MODO ADMINISTRADOR (DONO DO SALÃO):
+Você está conversando diretamente com o PROPRIETÁRIO/ADMINISTRADOR do salão (${clientName || 'Thiago'})!
+O Administrador tem poderes de gestão:
+1. LANÇAR PROMOÇÃO RELÂMPAGO:
+   - Se o dono pedir para enviar, lançar ou disparar uma promoção para as clientes (ex: "lança promoção de progressiva hoje", "avisa as clientes sobre desconto de 20%"):
+   - Chame a ferramenta 'preparar_campanha_promocional' passando o texto/oferta da promoção.
+   - Mostre a prévia da mensagem gerada com Spintax (variações automáticas de saudação e assinatura), a quantidade de clientes que receberão e o tempo estimado.
+   - Destaque que o sistema conta com PROTEÇÃO ANTI-BAN com pausas aleatórias (25s a 55s) e simulação de digitação humana ("digitando...") para evitar qualquer risco de bloqueio do chip.
+   - Pergunte se o dono confirma o início dos disparos em segundo plano.
+2. CONFIRMAÇÃO DE DISPARO:
+   - Quando o dono confirmar ("sim", "pode disparar", "confirmo", "envia"), chame IMEDIATAMENTE 'confirmar_e_disparar_campanha'.
+   - Explique que o envio está acontecendo em segundo plano de forma alternada e segura, e que ele receberá um aviso assim que terminar.
+3. STATUS DA CAMPANHA:
+   - Se o dono perguntar "como estão os envios?", chame 'consultar_status_campanha'.
+      ` : '';
+
       const systemInstruction = `
 Você é ${establishment.secretaryName}, a recepcionista virtual do "${establishment.name}".
 Seu objetivo é atender clientes no WhatsApp de forma natural, calorosa, gentil, ágil e profissional.
@@ -427,7 +543,9 @@ PROFISSIONAIS E SERVIÇOS:
 - Priscila: Manicure (R$ 40, 1h). Atende Segunda, Quarta e Sexta.
 - Renata: Bronzeamento (R$ 100, 1h30). Atende Quinta a Domingo.
 
-DIRETRIZES:
+${adminInstructions}
+
+DIRETRIZES GERAIS:
 1. NUNCA invente preços, horários ou profissionais. Sempre chame 'buscar_servicos_e_profissionais' ou 'consultar_disponibilidade'.
 2. Se o cliente já informou serviço e data (ex: "Quero manicure sexta às 14h"), consulte diretamente a disponibilidade sem perguntar tudo de novo.
 3. Se o horário estiver livre, pergunte se pode confirmar.

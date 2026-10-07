@@ -8,6 +8,7 @@ import { storage } from './db/storage.js';
 import { aiService } from './services/ai.js';
 import { whatsappService } from './services/whatsapp.js';
 import { googleCalendar } from './services/calendar.js';
+import { campaignService } from './services/campaign.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'salao-beauty-secret-token-2026';
 
@@ -295,6 +296,40 @@ export function createServer() {
 
   app.get('/api/chat/history/:phone', (req, res) => {
     res.json(storage.getConversationHistory(req.params.phone));
+  });
+
+  // --- PROMOÇÕES RELÂMPAGO & CAMPANHAS ---
+  app.get('/api/campaigns', (req, res) => {
+    res.json(storage.getCampaigns());
+  });
+
+  app.post('/api/campaigns/prepare', (req, res) => {
+    const { title, rawDescription, minDelay, maxDelay } = req.body;
+    if (!rawDescription) return res.status(400).json({ error: 'Descrição da promoção é obrigatória.' });
+    const est = storage.getEstablishment();
+    const result = campaignService.prepareCampaign(
+      est.id,
+      title || 'Promoção Relâmpago',
+      rawDescription,
+      minDelay || 25,
+      maxDelay || 55
+    );
+    res.json({ success: true, ...result });
+  });
+
+  app.post('/api/campaigns/:id/start', async (req, res) => {
+    const ok = await campaignService.startCampaign(req.params.id);
+    res.json({ success: ok });
+  });
+
+  app.post('/api/campaigns/:id/cancel', (req, res) => {
+    const ok = campaignService.cancelCampaign(req.params.id);
+    res.json({ success: ok });
+  });
+
+  app.get('/api/campaigns/:id/status', (req, res) => {
+    const status = campaignService.getCampaignStatus(req.params.id);
+    res.json(status || { error: 'Campanha não encontrada' });
   });
 
   return app;
