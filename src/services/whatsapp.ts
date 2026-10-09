@@ -2,6 +2,7 @@ import makeWASocket, {
   DisconnectReason,
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
+  downloadMediaMessage,
   WASocket
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
@@ -137,27 +138,6 @@ export class WhatsAppService {
             continue;
           }
 
-          // Extração segura do conteúdo textual
-          const messageText =
-            msg.message?.conversation ||
-            msg.message?.extendedTextMessage?.text ||
-            msg.message?.ephemeralMessage?.message?.conversation ||
-            msg.message?.ephemeralMessage?.message?.extendedTextMessage?.text ||
-            msg.message?.viewOnceMessage?.message?.conversation ||
-            msg.message?.viewOnceMessage?.message?.extendedTextMessage?.text ||
-            msg.message?.viewOnceMessageV2?.message?.conversation ||
-            msg.message?.viewOnceMessageV2?.message?.extendedTextMessage?.text ||
-            '';
-
-          if (!messageText || messageText.trim().length === 0) {
-            continue;
-          }
-
-          // Se a mensagem for idêntica à última resposta emitida pela IA, evita loop
-          if (this.recentBotReplies.has(messageText.trim())) {
-            continue;
-          }
-
           // Extração correta do ID/telefone sem o sufixo de dispositivo (:49, :50) nem domínio (@lid, @s.whatsapp.net)
           const userPart = remoteJid.split('@')[0].split(':')[0];
           const cleanClientPhone = userPart.replace(/\D/g, '');
@@ -177,8 +157,6 @@ export class WhatsAppService {
             return s1.length >= 8 && s1 === s2;
           };
 
-          console.log('[WhatsApp Evento]', { remoteJid, cleanClientPhone, fromMe: msg.key.fromMe, type: m.type, botPhone, botLid, text: messageText });
-
           // Verifica se é o próprio usuário (via número normal ou via LID no chat com você mesmo)
           const isSelf = isMatchingPhone(cleanClientPhone, botPhone) || (botLid && cleanClientPhone === botLid);
           const isAllowedExternal = [adminPhone, ...config.allowedPhoneNumbers].filter(Boolean).some(num => isMatchingPhone(cleanClientPhone, num));
@@ -194,6 +172,81 @@ export class WhatsAppService {
           }
 
           const effectivePhone = isSelf ? (botPhone || '5511951364159') : cleanClientPhone;
+
+          // Extrai áudio se presente (mensagem de voz gravada ou arquivo de áudio)
+          const audioMsg =
+            msg.message?.audioMessage ||
+            msg.message?.ephemeralMessage?.message?.audioMessage ||
+            msg.message?.viewOnceMessage?.message?.audioMessage ||
+            msg.message?.viewOnceMessageV2?.message?.audioMessage;
+
+          // Extração de conteúdo textual
+          let messageText =
+            msg.message?.conversation ||
+            msg.message?.extendedTextMessage?.text ||
+            msg.message?.ephemeralMessage?.message?.conversation ||
+            msg.message?.ephemeralMessage?.message?.extendedTextMessage?.text ||
+            msg.message?.viewOnceMessage?.message?.conversation ||
+            msg.message?.viewOnceMessage?.message?.extendedTextMessage?.text ||
+            msg.message?.viewOnceMessageV2?.message?.conversation ||
+            msg.message?.viewOnceMessageV2?.message?.extendedTextMessage?.text ||
+            '';
+
+          // Se for mensagem de áudio, baixa a mídia e transcreve com inteligência artificial
+          if (audioMsg) {
+            console.log(`[WhatsApp 🎙️ Áudio] Mensagem de voz recebida de ${cleanClientPhone}. Baixando mídia...`);
+            try {
+              if (this.sock) {
+                await this.sock.presenceSubscribe(remoteJid);
+                await this.sock.sendPresenceUpdate('recording', remoteJid);
+              }
+
+              const audioBuffer = await downloadMediaMessage(
+                msg,
+                'buffer',
+                {},
+                {
+                  logger: pino({ level: 'silent' }),
+                  reuploadRequest: (m: any) => this.sock!.updateMediaMessage(m)
+                }
+              );
+
+              if (audioBuffer && Buffer.isBuffer(audioBuffer)) {
+                console.log(`[WhatsApp 🎙️ Áudio] Áudio baixado (${audioBuffer.length} bytes). Transcrevendo com Gemini...`);
+                const transcription = await aiService.transcribeAudio(
+                  audioBuffer,
+                  audioMsg.mimetype || 'audio/ogg'
+                );
+
+                if (transcription && transcription.trim().length > 0) {
+                  messageText = transcription.trim();
+                  console.log(`[WhatsApp 🎙️ Transcrição Concluída]: "${messageText}"`);
+                } else {
+                  console.log(`[WhatsApp 🎙️ Áudio] Não foi possível extrair texto do áudio.`);
+                }
+              }
+            } catch (audioErr) {
+              console.error(`[WhatsApp 🎙️ Erro] Falha ao processar áudio:`, audioErr);
+            }
+          }
+
+          console.log('[WhatsApp Evento]', { remoteJid, cleanClientPhone, fromMe: msg.key.fromMe, type: m.type, isAudio: !!audioMsg, text: messageText });
+
+          if (!messageText || messageText.trim().length === 0) {
+            if (audioMsg) {
+              const targetJid = (isSelf || remoteJid.endsWith('@lid')) ? `${effectivePhone}@s.whatsapp.net` : remoteJid;
+              await this.sock?.sendMessage(targetJid, {
+                text: 'Oi! Recebi seu áudio, mas o som ficou um pouquinho baixo ou cortado. Poderia enviar novamente ou digitar aqui? Estou pronta para te atender! 😊💜'
+              });
+            }
+            continue;
+          }
+
+          // Se a mensagem for idêntica à última resposta emitida pela IA, evita loop
+          if (this.recentBotReplies.has(messageText.trim())) {
+            continue;
+          }
+
           console.log(`[WhatsApp 👤 Seu Número] Processando mensagem com IA: "${messageText}"`);
 
           // Verifica se está sob intervenção humana

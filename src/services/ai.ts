@@ -601,6 +601,65 @@ DIRETRIZES GERAIS:
       return fallback;
     }
   }
+
+  // Transcrição de áudio do WhatsApp usando Google Gemini
+  public async transcribeAudio(audioBuffer: Buffer, mimeType: string = 'audio/ogg'): Promise<string> {
+    if (!this.genAI) this.initClient();
+    if (!this.genAI) throw new Error('Gemini API key não configurada.');
+
+    const cleanMime = (mimeType || 'audio/ogg').split(';')[0].trim();
+
+    try {
+      const response = await this.genAI.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              {
+                inlineData: {
+                  mimeType: cleanMime,
+                  data: audioBuffer.toString('base64')
+                }
+              },
+              {
+                text: 'Transcreva todo o áudio falado em português com precisão absoluta. Retorne APENAS a transcrição literal do que foi falado pela pessoa, sem introdução, sem aspas, sem explicações.'
+              }
+            ]
+          }
+        ]
+      });
+
+      return (response.text || '').trim();
+    } catch (err: any) {
+      console.error('[AI] Erro ao transcrever com gemini-3.8-flash:', err?.message || err);
+      try {
+        const fallbackRes = await this.genAI.models.generateContent({
+          model: 'gemini-3.5-flash-lite',
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                {
+                  inlineData: {
+                    mimeType: cleanMime,
+                    data: audioBuffer.toString('base64')
+                  }
+                },
+                {
+                  text: 'Transcreva o áudio em português. Retorne apenas o texto falado.'
+                }
+              ]
+            }
+          ]
+        });
+        return (fallbackRes.text || '').trim();
+      } catch (e2) {
+        console.error('[AI] Fallback de transcrição de áudio também falhou:', e2);
+        return '';
+      }
+    }
+  }
 }
 
 export const aiService = new AIService();
