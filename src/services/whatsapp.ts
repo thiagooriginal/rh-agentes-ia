@@ -274,14 +274,8 @@ export class WhatsAppService {
             if (this.sock) {
               await this.sock.sendPresenceUpdate('paused', remoteJid);
               
-              // Se o JID for do tipo @lid (identificador interno de dispositivo) ou self-chat,
-              // envia obrigatoriamente para o número real @s.whatsapp.net para aparecer no app do celular
-              const targetJid = (isSelf || remoteJid.endsWith('@lid')) 
-                ? `${effectivePhone}@s.whatsapp.net` 
-                : remoteJid;
-
-              console.log(`[WhatsApp 📤 Envio] Enviando para ${targetJid}: "${replyText.slice(0, 50)}..."`);
-              const sent = await this.sock.sendMessage(targetJid, { text: replyText });
+              console.log(`[WhatsApp 📤 Envio] Enviando para ${remoteJid}: "${replyText.slice(0, 50)}..."`);
+              const sent = await this.sock.sendMessage(remoteJid, { text: replyText });
               if (sent?.key?.id) {
                 this.sentBotMessageIds.add(sent.key.id);
                 if (this.sentBotMessageIds.size > 200) {
@@ -289,7 +283,16 @@ export class WhatsAppService {
                   if (first) this.sentBotMessageIds.delete(first);
                 }
               }
-              console.log(`[WhatsApp] Resposta enviada com sucesso para ${targetJid}!`);
+
+              // Se for self-chat e o remoteJid for @lid, garante envio duplo para sincronizar nos dois formatos
+              if (isSelf && remoteJid.endsWith('@lid')) {
+                try {
+                  const pnJid = `${effectivePhone}@s.whatsapp.net`;
+                  const sentPn = await this.sock.sendMessage(pnJid, { text: replyText });
+                  if (sentPn?.key?.id) this.sentBotMessageIds.add(sentPn.key.id);
+                } catch (e) {}
+              }
+              console.log(`[WhatsApp] Resposta enviada com sucesso para ${remoteJid}!`);
             }
           } catch (err) {
             console.error(`[WhatsApp] Erro ao responder ${cleanClientPhone}:`, err);
