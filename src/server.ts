@@ -422,19 +422,16 @@ export function createServer() {
       const result = await demoService.startDemoSession(name, phone, niche);
       
       // Envia a mensagem de abertura automaticamente no WhatsApp do lead via LINHA DO PORTAL
-      let whatsappSent = false;
-      let deliveryNote = '';
-
-      if (portalWhatsAppService.isConnected()) {
-        whatsappSent = await portalWhatsAppService.sendMessageToClient(result.lead.phone, result.openerMessage);
-        if (whatsappSent) {
-          deliveryNote = 'Mensagem de boas-vindas enviada para o seu WhatsApp! Responda por lá com texto ou áudio.';
-        } else {
-          deliveryNote = 'Não foi possível disparar a mensagem via WhatsApp neste instante. Tente novamente.';
-        }
-      } else {
-        deliveryNote = 'Sua demonstração foi registrada com sucesso! (Aviso: O WhatsApp do Portal das IAs está aguardando leitura do QR Code para disparo instantâneo).';
+      if (!portalWhatsAppService.isConnected()) {
+        throw new Error('A Linha de WhatsApp do Portal (Linha 2) não está conectada no momento. Por favor, conecte a Linha 2 no topo da página.');
       }
+
+      const whatsappSent = await portalWhatsAppService.sendMessageToClient(result.lead.phone, result.openerMessage);
+      if (!whatsappSent) {
+        throw new Error('Não foi possível disparar a mensagem no WhatsApp. Verifique se o número informado está correto e possui WhatsApp.');
+      }
+
+      const deliveryNote = 'Mensagem de boas-vindas enviada para o seu WhatsApp! Responda por lá com texto ou áudio.';
 
       res.json({
         success: true,

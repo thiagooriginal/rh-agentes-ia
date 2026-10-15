@@ -380,41 +380,79 @@ export class PortalWhatsAppService {
   // Disparo ativo de mensagens pela linha do Portal
   public async sendMessageToClient(phone: string, text: string): Promise<boolean> {
     const clean = phone.replace(/\D/g, '');
-    const remoteJid = `${clean}@s.whatsapp.net`;
-
-    if (this.sock && this.state.state === 'connected') {
-      try {
-        const sent = await this.sock.sendMessage(remoteJid, { text });
-        if (sent?.key?.id) {
-          this.sentBotMessageIds.add(sent.key.id);
-        }
-        this.recentBotReplies.add(text.trim());
-
-        // Se o Baileys mapear o LID deste telefone, associa no demoService
-        try {
-          const lidJid = await (this.sock as any)?.signalRepository?.lidMapping?.getLIDForPN(remoteJid);
-          if (lidJid) {
-            const cleanLid = lidJid.split('@')[0].split(':')[0].replace(/\D/g, '');
-            demoService.mapLidToPhone(cleanLid, clean);
-          }
-        } catch (e) {}
-
-        // Se for o próprio número do bot (self-chat), também sincroniza no @lid
-        const botPhone = (this.sock?.user?.id?.split('@')[0]?.split(':')[0] || '').replace(/\D/g, '');
-        const botLid = (this.sock?.user?.lid?.split('@')[0]?.split(':')[0] || '').replace(/\D/g, '');
-        if (clean === botPhone && botLid) {
-          try {
-            await this.sock.sendMessage(`${botLid}@lid`, { text });
-          } catch (e) {}
-        }
-
-        return true;
-      } catch (err) {
-        console.error(`[Portal WhatsApp] Falha ao enviar mensagem para ${phone}:`, err);
-        return false;
-      }
+    if (!this.sock || this.state.state !== 'connected') {
+      console.warn(`[Portal WhatsApp] Tentativa de envio para ${phone}, mas o socket não está conectado.`);
+      throw new Error('WhatsApp do Portal (Linha 2) não está conectado no momento.');
     }
-    return false;
+
+    try {
+      console.log(`[Portal WhatsApp 🚀 Disparo] Iniciando verificação e envio para ${clean}...`);
+
+      let targetJid = `${clean}@s.whatsapp.net`;
+
+      // 1. Resolve o JID real usando onWhatsApp (essencial para números do Brasil com ou sem 9º dígito)
+      try {
+        const variants = [targetJid];
+        if (clean.startsWith('55') && clean.length === 13 && clean[4] === '9') {
+          // Versão alternativa sem o 9º dígito (55 + DDD + 8 dígitos)
+          variants.push(`55${clean.substring(2, 4)}${clean.substring(5)}@s.whatsapp.net`);
+        } else if (clean.startsWith('55') && clean.length === 12) {
+          // Versão alternativa com o 9º dígito (55 + DDD + 9 + 8 dígitos)
+          variants.push(`55${clean.substring(2, 4)}9${clean.substring(4)}@s.whatsapp.net`);
+        }
+
+        console.log(`[Portal WhatsApp 🔍 Checagem] Consultando existência no WhatsApp:`, variants);
+        const results = await this.sock.onWhatsApp(...variants);
+        console.log(`[Portal WhatsApp 🔍 Resultado onWhatsApp]:`, JSON.stringify(results));
+
+        const valid = results?.find(r => r.exists);
+        if (valid?.jid) {
+          targetJid = valid.jid;
+          console.log(`[Portal WhatsApp ✅ JID Validado]: ${targetJid}`);
+        } else {
+          console.warn(`[Portal WhatsApp ⚠️ Atenção] Número ${clean} não localizado via onWhatsApp.`);
+          throw new Error(`O número informado não foi localizado no WhatsApp. Por favor, confira o DDD e os dígitos digitados.`);
+        }
+      } catch (errCheck: any) {
+        if (errCheck.message && errCheck.message.includes('não foi localizado no WhatsApp')) {
+          throw errCheck;
+        }
+        console.error(`[Portal WhatsApp] Aviso ao consultar onWhatsApp:`, errCheck.message);
+      }
+
+      // 2. Dispara a mensagem para o targetJid verificado
+      console.log(`[Portal WhatsApp 📤 Enviando Mensagem] Disparando para ${targetJid}: "${text.slice(0, 60)}..."`);
+      const sent = await this.sock.sendMessage(targetJid, { text });
+
+      if (sent?.key?.id) {
+        this.sentBotMessageIds.add(sent.key.id);
+      }
+      this.recentBotReplies.add(text.trim());
+      console.log(`[Portal WhatsApp ✅ Sucesso] Mensagem enviada com sucesso para ${targetJid}! Key:`, sent?.key?.id);
+
+      // Se o Baileys mapear o LID deste telefone, associa no demoService
+      try {
+        const lidJid = await (this.sock as any)?.signalRepository?.lidMapping?.getLIDForPN(targetJid);
+        if (lidJid) {
+          const cleanLid = lidJid.split('@')[0].split(':')[0].replace(/\D/g, '');
+          demoService.mapLidToPhone(cleanLid, clean);
+        }
+      } catch (e) {}
+
+      // Se for o próprio número do bot (self-chat), também sincroniza no @lid
+      const botPhone = (this.sock?.user?.id?.split('@')[0]?.split(':')[0] || '').replace(/\D/g, '');
+      const botLid = (this.sock?.user?.lid?.split('@')[0]?.split(':')[0] || '').replace(/\D/g, '');
+      if (clean === botPhone && botLid) {
+        try {
+          await this.sock.sendMessage(`${botLid}@lid`, { text });
+        } catch (e) {}
+      }
+
+      return true;
+    } catch (err: any) {
+      console.error(`[Portal WhatsApp ❌ Falha] Erro ao enviar mensagem para ${phone}:`, err);
+      throw err;
+    }
   }
 
   public async disconnect(): Promise<void> {
