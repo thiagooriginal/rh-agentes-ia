@@ -10,6 +10,11 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    html, body {
+      overflow-x: hidden;
+      max-width: 100vw;
+      width: 100%;
+    }
     .glass-card {
       background: rgba(15, 23, 42, 0.75);
       backdrop-filter: blur(14px);
@@ -28,43 +33,51 @@
     }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-purple-600 selection:text-white">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-purple-600 selection:text-white overflow-x-hidden w-full max-w-full">
 
   <!-- Topbar Header -->
   <header class="border-b border-slate-800/80 bg-slate-900/90 backdrop-blur-md sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+    <div class="max-w-7xl mx-auto px-3.5 sm:px-6 py-2.5 sm:py-0 sm:h-16 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-4">
       
-      <!-- Brand & Active Niche -->
-      <div class="flex items-center space-x-3">
-        <div id="nicheIconBadge" class="w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-lg border border-white/10" style="background: rgba(249, 115, 22, 0.2);">
-          🍕
-        </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <h1 id="dashBusinessTitle" class="text-sm sm:text-base font-bold tracking-tight text-white">
-              Forno & Sabor Pizzaria Artesanal
-            </h1>
-            <span id="dashBadge" class="text-[10px] font-semibold px-2 py-0.5 rounded-full border hidden sm:inline-block" style="background: rgba(249, 115, 22, 0.15); color: #f97316; border-color: rgba(249, 115, 22, 0.4);">
-              Pizzaria & Delivery
-            </span>
+      <!-- Top Row on Mobile / Left Column on Desktop: Brand Info + WhatsApp Button -->
+      <div class="flex items-center justify-between gap-2 w-full sm:w-auto">
+        <div class="flex items-center space-x-2.5 min-w-0">
+          <div id="nicheIconBadge" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-lg sm:text-xl shadow-lg border border-white/10 shrink-0" style="background: rgba(249, 115, 22, 0.2);">
+            🍕
           </div>
-          <p class="text-xs text-slate-400 flex items-center gap-1.5">
-            <span>Agente IA: <strong id="dashAgentName" class="text-slate-200">Luigi</strong></span>
-            <span>•</span>
-            <span class="inline-flex items-center gap-1 text-emerald-400 font-medium">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              WhatsApp 24h Ativo
-            </span>
-          </p>
+          <div class="min-w-0">
+            <div class="flex items-center gap-1.5">
+              <h1 id="dashBusinessTitle" class="text-xs sm:text-base font-bold tracking-tight text-white truncate max-w-[150px] sm:max-w-none">
+                Forno & Sabor Pizzaria Artesanal
+              </h1>
+              <span id="dashBadge" class="text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.5 rounded-full border hidden md:inline-block" style="background: rgba(249, 115, 22, 0.15); color: #f97316; border-color: rgba(249, 115, 22, 0.4);">
+                Pizzaria & Delivery
+              </span>
+            </div>
+            <p class="text-[11px] sm:text-xs text-slate-400 flex items-center gap-1 truncate">
+              <span>Agente: <strong id="dashAgentName" class="text-slate-200">Luigi</strong></span>
+              <span>•</span>
+              <span class="inline-flex items-center gap-1 text-emerald-400 font-medium">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                WhatsApp 24h
+              </span>
+            </p>
+          </div>
         </div>
+
+        <!-- WhatsApp Button (Prominent & Accessible) -->
+        <button onclick="openWhatsAppChat()" class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 transition cursor-pointer">
+          <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Conversar no WhatsApp</span>
+          <span class="sm:hidden">WhatsApp</span>
+        </button>
       </div>
 
-      <!-- Niche Switcher & Actions -->
-      <div class="flex items-center space-x-3">
-        
+      <!-- Second Row on Mobile / Right Column on Desktop: Niche Switcher & Vitrine -->
+      <div class="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
         <!-- Niche Selector Dropdown -->
-        <div class="relative">
-          <select id="nicheSelector" onchange="changeNiche(this.value)" class="bg-slate-900 border border-slate-700 text-slate-200 text-xs font-semibold rounded-xl px-3 py-2 pr-8 focus:outline-none focus:border-purple-500 cursor-pointer transition appearance-none">
+        <div class="relative w-full sm:w-auto flex-1 sm:flex-initial">
+          <select id="nicheSelector" onchange="changeNiche(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-xs font-semibold rounded-xl px-3 py-2 pr-8 focus:outline-none focus:border-purple-500 cursor-pointer transition appearance-none">
             <option value="pizzaria">🍕 Pizzaria & Delivery (Luigi)</option>
             <option value="petshop">🐾 Pet Shop & Vet (Bob)</option>
             <option value="estetica">✨ Clínica de Estética (Camila)</option>
@@ -73,21 +86,16 @@
             <option value="cabeleireiro">✂️ Salão & Barbearia (Sofia)</option>
             <option value="pessoal">👔 Gestão & Finanças (Jarvis)</option>
           </select>
-          <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-3 pointer-events-none"></i>
+          <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-2.5 sm:top-3 pointer-events-none"></i>
         </div>
 
-        <a href="/vitrine.html" class="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-medium transition">
+        <a href="/vitrine.html" class="inline-flex shrink-0 items-center gap-1.5 px-2.5 py-2 sm:px-3 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-medium transition">
           <i data-lucide="store" class="w-3.5 h-3.5 text-purple-400"></i>
-          <span>Vitrine de IAs</span>
+          <span class="hidden sm:inline">Vitrine de IAs</span>
+          <span class="sm:hidden">Vitrine</span>
         </a>
-
-        <button onclick="openWhatsAppChat()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 transition cursor-pointer">
-          <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
-          <span class="hidden sm:inline">Conversar no WhatsApp</span>
-          <span class="sm:hidden">WhatsApp</span>
-        </button>
-
       </div>
+
     </div>
   </header>
 
@@ -95,110 +103,112 @@
   <div class="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full space-y-6">
 
     <!-- KPI Summary Row -->
-    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3.5">
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-3.5">
       
       <!-- KPI 1: Faturamento -->
-      <div class="glass-card rounded-2xl p-4 border border-slate-800">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-xs text-slate-400 font-medium">Faturamento Mensal</span>
-          <div class="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-            <i data-lucide="trending-up" class="w-4 h-4"></i>
+      <div class="glass-card rounded-2xl p-3 sm:p-4 border border-slate-800 flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-1 sm:mb-2">
+          <span class="text-[11px] sm:text-xs text-slate-400 font-medium">Faturamento</span>
+          <div class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
+            <i data-lucide="trending-up" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
           </div>
         </div>
-        <div id="kpiRevenue" class="text-xl sm:text-2xl font-extrabold text-white">R$ 0,00</div>
-        <div class="text-[11px] text-emerald-400 mt-1 flex items-center gap-1">
-          <i data-lucide="arrow-up-right" class="w-3 h-3"></i>
-          <span>+18.4% vs mês anterior</span>
+        <div id="kpiRevenue" class="text-base sm:text-xl md:text-2xl font-extrabold text-white truncate">R$ 0,00</div>
+        <div class="text-[10px] sm:text-[11px] text-emerald-400 mt-1 flex items-center gap-1 truncate">
+          <i data-lucide="arrow-up-right" class="w-3 h-3 shrink-0"></i>
+          <span>+18.4% vs mês ant.</span>
         </div>
       </div>
 
       <!-- KPI 2: Lucro Líquido -->
-      <div class="glass-card rounded-2xl p-4 border border-slate-800">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-xs text-slate-400 font-medium">Lucro Líquido</span>
-          <div class="w-7 h-7 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center">
-            <i data-lucide="wallet" class="w-4 h-4"></i>
+      <div class="glass-card rounded-2xl p-3 sm:p-4 border border-slate-800 flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-1 sm:mb-2">
+          <span class="text-[11px] sm:text-xs text-slate-400 font-medium">Lucro Líquido</span>
+          <div class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center shrink-0">
+            <i data-lucide="wallet" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
           </div>
         </div>
-        <div id="kpiProfit" class="text-xl sm:text-2xl font-extrabold text-white">R$ 0,00</div>
-        <div id="kpiMargin" class="text-[11px] text-purple-300 mt-1">Margem: 0%</div>
+        <div id="kpiProfit" class="text-base sm:text-xl md:text-2xl font-extrabold text-white truncate">R$ 0,00</div>
+        <div id="kpiMargin" class="text-[10px] sm:text-[11px] text-purple-300 mt-1 truncate">Margem: 0%</div>
       </div>
 
       <!-- KPI 3: Pedidos / Atendimentos -->
-      <div class="glass-card rounded-2xl p-4 border border-slate-800">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-xs text-slate-400 font-medium">Total de Pedidos</span>
-          <div class="w-7 h-7 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center">
-            <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+      <div class="glass-card rounded-2xl p-3 sm:p-4 border border-slate-800 flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-1 sm:mb-2">
+          <span class="text-[11px] sm:text-xs text-slate-400 font-medium">Total de Pedidos</span>
+          <div class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center shrink-0">
+            <i data-lucide="shopping-bag" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
           </div>
         </div>
-        <div id="kpiOrders" class="text-xl sm:text-2xl font-extrabold text-white">0</div>
-        <div class="text-[11px] text-slate-400 mt-1">Pedidos concluídos</div>
+        <div id="kpiOrders" class="text-base sm:text-xl md:text-2xl font-extrabold text-white truncate">0</div>
+        <div class="text-[10px] sm:text-[11px] text-slate-400 mt-1 truncate">Pedidos concluídos</div>
       </div>
 
       <!-- KPI 4: Ticket Médio -->
-      <div class="glass-card rounded-2xl p-4 border border-slate-800">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-xs text-slate-400 font-medium">Ticket Médio</span>
-          <div class="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
-            <i data-lucide="receipt" class="w-4 h-4"></i>
+      <div class="glass-card rounded-2xl p-3 sm:p-4 border border-slate-800 flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-1 sm:mb-2">
+          <span class="text-[11px] sm:text-xs text-slate-400 font-medium">Ticket Médio</span>
+          <div class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
+            <i data-lucide="receipt" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
           </div>
         </div>
-        <div id="kpiTicket" class="text-xl sm:text-2xl font-extrabold text-white">R$ 0,00</div>
-        <div class="text-[11px] text-slate-400 mt-1">Média por cliente</div>
+        <div id="kpiTicket" class="text-base sm:text-xl md:text-2xl font-extrabold text-white truncate">R$ 0,00</div>
+        <div class="text-[10px] sm:text-[11px] text-slate-400 mt-1 truncate">Média por cliente</div>
       </div>
 
       <!-- KPI 5: Conversão IA -->
-      <div class="glass-card rounded-2xl p-4 border border-slate-800 col-span-2 lg:col-span-1">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-xs text-slate-400 font-medium">Conversão WhatsApp IA</span>
-          <div class="w-7 h-7 rounded-lg bg-pink-500/10 text-pink-400 flex items-center justify-center">
-            <i data-lucide="bot" class="w-4 h-4"></i>
+      <div class="glass-card rounded-2xl p-3 sm:p-4 border border-slate-800 col-span-2 lg:col-span-1 flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-1 sm:mb-2">
+          <span class="text-[11px] sm:text-xs text-slate-400 font-medium">Conversão WhatsApp IA</span>
+          <div class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-pink-500/10 text-pink-400 flex items-center justify-center shrink-0">
+            <i data-lucide="bot" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
           </div>
         </div>
-        <div id="kpiAiRate" class="text-xl sm:text-2xl font-extrabold text-white">96.4%</div>
-        <div class="text-[11px] text-emerald-400 mt-1">Sem filas e 24h ativo</div>
+        <div id="kpiAiRate" class="text-base sm:text-xl md:text-2xl font-extrabold text-white truncate">96.4%</div>
+        <div class="text-[10px] sm:text-[11px] text-emerald-400 mt-1 truncate">Sem filas • Atendimento 24h</div>
       </div>
 
     </div>
 
     <!-- Navigation Tabs -->
-    <div class="flex items-center gap-2 border-b border-slate-800 pb-3 overflow-x-auto custom-scrollbar">
-      <button onclick="switchTab('financeiro')" id="tabBtn-financeiro" class="tab-button px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 bg-purple-600 text-white shadow-lg shadow-purple-600/30">
-        <i data-lucide="dollar-sign" class="w-4 h-4"></i>
-        <span>Financeiro & DRE</span>
-      </button>
+    <div class="w-full overflow-hidden border-b border-slate-800 pb-2">
+      <div class="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+        <button onclick="switchTab('financeiro')" id="tabBtn-financeiro" class="tab-button shrink-0 whitespace-nowrap px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 bg-purple-600 text-white shadow-lg shadow-purple-600/30">
+          <i data-lucide="dollar-sign" class="w-4 h-4"></i>
+          <span>Financeiro & DRE</span>
+        </button>
 
-      <button onclick="switchTab('clientes')" id="tabBtn-clientes" class="tab-button px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent">
-        <i data-lucide="users" class="w-4 h-4"></i>
-        <span>Clientes & Promoções</span>
-      </button>
+        <button onclick="switchTab('clientes')" id="tabBtn-clientes" class="tab-button shrink-0 whitespace-nowrap px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent">
+          <i data-lucide="users" class="w-4 h-4"></i>
+          <span>Clientes & Promoções</span>
+        </button>
 
-      <button onclick="switchTab('equipe')" id="tabBtn-equipe" class="tab-button px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent">
-        <i data-lucide="user-check" class="w-4 h-4"></i>
-        <span>Equipe & Parceiros</span>
-      </button>
+        <button onclick="switchTab('equipe')" id="tabBtn-equipe" class="tab-button shrink-0 whitespace-nowrap px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent">
+          <i data-lucide="user-check" class="w-4 h-4"></i>
+          <span>Equipe & Parceiros</span>
+        </button>
 
-      <button onclick="switchTab('custos')" id="tabBtn-custos" class="tab-button px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent">
-        <i data-lucide="pie-chart" class="w-4 h-4"></i>
-        <span>Custos & Contas (Fixas/Variáveis)</span>
-      </button>
+        <button onclick="switchTab('custos')" id="tabBtn-custos" class="tab-button shrink-0 whitespace-nowrap px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent">
+          <i data-lucide="pie-chart" class="w-4 h-4"></i>
+          <span>Custos & Contas</span>
+        </button>
 
-      <button onclick="switchTab('ia')" id="tabBtn-ia" class="tab-button px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent">
-        <i data-lucide="sparkles" class="w-4 h-4 text-purple-400"></i>
-        <span>Atendimento IA WhatsApp</span>
-      </button>
+        <button onclick="switchTab('ia')" id="tabBtn-ia" class="tab-button shrink-0 whitespace-nowrap px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent">
+          <i data-lucide="sparkles" class="w-4 h-4 text-purple-400"></i>
+          <span>Atendimento IA</span>
+        </button>
+      </div>
     </div>
 
     <!-- TAB 1: FINANCEIRO & DRE -->
     <div id="tab-financeiro" class="tab-content space-y-6">
       
       <!-- Chart + DRE Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         
         <!-- Daily Evolution Chart (2 cols) -->
-        <div class="glass-card rounded-2xl p-5 lg:col-span-2 border border-slate-800">
-          <div class="flex items-center justify-between mb-4">
+        <div class="glass-card rounded-2xl p-4 sm:p-5 lg:col-span-2 border border-slate-800">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
             <div>
               <h3 class="text-sm font-bold text-white flex items-center gap-2">
                 <i data-lucide="bar-chart-2" class="w-4 h-4 text-purple-400"></i>
@@ -215,13 +225,13 @@
               </span>
             </div>
           </div>
-          <div class="h-64 sm:h-72">
+          <div class="h-60 sm:h-72 w-full overflow-hidden">
             <canvas id="dailyRevenueChart"></canvas>
           </div>
         </div>
 
         <!-- DRE Resumido (1 col) -->
-        <div class="glass-card rounded-2xl p-5 border border-slate-800 flex flex-col justify-between">
+        <div class="glass-card rounded-2xl p-4 sm:p-5 border border-slate-800 flex flex-col justify-between">
           <div>
             <h3 class="text-sm font-bold text-white flex items-center gap-2 mb-1">
               <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-400"></i>
@@ -267,22 +277,22 @@
     <div id="tab-clientes" class="tab-content hidden space-y-6">
       
       <!-- Action Bar -->
-      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
             <i data-lucide="users" class="w-4 h-4 text-purple-400"></i>
             <span>Base de Clientes Cadastrados pelo WhatsApp</span>
           </h3>
           <p class="text-xs text-slate-400">Contatos captados automaticamente pelo agente digital durante o atendimento.</p>
         </div>
 
-        <div class="flex items-center gap-2">
-          <button onclick="openNewClientModal()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+          <button onclick="openNewClientModal()" class="w-full sm:w-auto justify-center px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
             <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
             <span>+ Novo Cliente</span>
           </button>
 
-          <button onclick="openCampaignModal()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-bold shadow-lg shadow-purple-600/30 flex items-center gap-1.5 transition cursor-pointer">
+          <button onclick="openCampaignModal()" class="w-full sm:w-auto justify-center px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-bold shadow-lg shadow-purple-600/30 flex items-center gap-1.5 transition cursor-pointer">
             <i data-lucide="megaphone" class="w-3.5 h-3.5"></i>
             <span>Disparar Promoção (Anti-Ban)</span>
           </button>
@@ -291,8 +301,15 @@
 
       <!-- Clients Table -->
       <div class="glass-card rounded-2xl border border-slate-800 overflow-hidden">
+        <div class="px-3.5 py-2 text-[11px] text-slate-400 bg-slate-900/60 border-b border-slate-800 flex items-center justify-between sm:hidden">
+          <span class="flex items-center gap-1.5">
+            <i data-lucide="arrow-left-right" class="w-3.5 h-3.5 text-purple-400"></i>
+            <span>Deslize para ver todos os dados</span>
+          </span>
+          <span class="text-[10px] text-slate-500 font-mono">Tabela Completa</span>
+        </div>
         <div class="overflow-x-auto custom-scrollbar">
-          <table class="w-full text-left text-xs">
+          <table class="w-full text-left text-xs min-w-[660px]">
             <thead class="bg-slate-900/80 text-slate-400 uppercase tracking-wider text-[10px] border-b border-slate-800">
               <tr>
                 <th class="py-3 px-4">Cliente</th>
@@ -312,13 +329,13 @@
       </div>
 
       <!-- Campaigns History -->
-      <div class="glass-card rounded-2xl p-5 border border-slate-800 space-y-4">
-        <div class="flex items-center justify-between">
+      <div class="glass-card rounded-2xl p-4 sm:p-5 border border-slate-800 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
             <i data-lucide="history" class="w-3.5 h-3.5 text-pink-400"></i>
-            <span>Histórico de Campanhas Promocionais Disparadas</span>
+            <span>Histórico de Campanhas Promocionais</span>
           </h4>
-          <span class="text-[11px] text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20 font-semibold">
+          <span class="text-[11px] text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20 font-semibold self-start sm:self-auto">
             Proteção Anti-Ban Ativa (25s a 55s)
           </span>
         </div>
@@ -333,23 +350,23 @@
     <!-- TAB 3: EQUIPE & PARCEIROS -->
     <div id="tab-equipe" class="tab-content hidden space-y-6">
       
-      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
             <i data-lucide="user-check" class="w-4 h-4 text-purple-400"></i>
-            <span>Equipe, Funcionários & Parceiros de Entrega</span>
+            <span>Equipe, Funcionários & Parceiros</span>
           </h3>
           <p class="text-xs text-slate-400">Controle de repasses, salários fixos, comissões e produtividade mensal.</p>
         </div>
 
-        <button onclick="openNewStaffModal()" class="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-lg shadow-purple-600/30 flex items-center gap-1.5 transition cursor-pointer">
+        <button onclick="openNewStaffModal()" class="w-full sm:w-auto justify-center px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-lg shadow-purple-600/30 flex items-center gap-1.5 transition cursor-pointer">
           <i data-lucide="plus" class="w-3.5 h-3.5"></i>
           <span>+ Adicionar Colaborador / Parceiro</span>
         </button>
       </div>
 
       <!-- Staff Grid -->
-      <div id="staffGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div id="staffGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
         <!-- Preenchido via JS -->
       </div>
 
@@ -359,55 +376,68 @@
     <div id="tab-custos" class="tab-content hidden space-y-6">
       
       <!-- Top Filters & Actions -->
-      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
             <i data-lucide="pie-chart" class="w-4 h-4 text-pink-400"></i>
             <span>Controle de Custos e Contas a Pagar</span>
           </h3>
           <p class="text-xs text-slate-400">Gestão detalhada de despesas fixas recorrentes e custos variáveis de fornecedores.</p>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
           <!-- Filtro de Tipo -->
-          <div class="inline-flex rounded-xl bg-slate-900 border border-slate-800 p-0.5 text-xs">
-            <button onclick="filterExpenses('TODAS')" id="expFilter-TODAS" class="px-3 py-1.5 rounded-lg font-semibold bg-purple-600 text-white transition">Todas</button>
-            <button onclick="filterExpenses('FIXA')" id="expFilter-FIXA" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">Fixas / Recorrentes</button>
-            <button onclick="filterExpenses('VARIAVEL')" id="expFilter-VARIAVEL" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">Variáveis / Insumos</button>
+          <div class="grid grid-cols-3 sm:inline-flex rounded-xl bg-slate-900 border border-slate-800 p-0.5 text-xs text-center w-full sm:w-auto">
+            <button onclick="filterExpenses('TODAS')" id="expFilter-TODAS" class="px-2.5 sm:px-3 py-1.5 rounded-lg font-semibold bg-purple-600 text-white transition">Todas</button>
+            <button onclick="filterExpenses('FIXA')" id="expFilter-FIXA" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">
+              <span class="sm:hidden">Fixas</span>
+              <span class="hidden sm:inline">Fixas / Recorrentes</span>
+            </button>
+            <button onclick="filterExpenses('VARIAVEL')" id="expFilter-VARIAVEL" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">
+              <span class="sm:hidden">Variáveis</span>
+              <span class="hidden sm:inline">Variáveis / Insumos</span>
+            </button>
           </div>
 
-          <button onclick="openNewExpenseModal()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 flex items-center gap-1.5 transition cursor-pointer">
+          <button onclick="openNewExpenseModal()" class="w-full sm:w-auto justify-center px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 flex items-center gap-1.5 transition cursor-pointer">
             <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-            <span>+ Nova Conta / Despesa</span>
+            <span>+ Nova Conta</span>
           </button>
         </div>
       </div>
 
       <!-- Expense Summary Badges -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <div class="glass-card rounded-2xl p-4 border border-slate-800">
           <span class="text-xs text-slate-400">Total Custos Fixos (Mensais)</span>
-          <div id="costTotalFixed" class="text-xl font-bold text-pink-400 mt-1">R$ 0,00</div>
+          <div id="costTotalFixed" class="text-lg sm:text-xl font-bold text-pink-400 mt-1">R$ 0,00</div>
           <span class="text-[11px] text-slate-500">Aluguel, energia, internet, softwares</span>
         </div>
 
         <div class="glass-card rounded-2xl p-4 border border-slate-800">
           <span class="text-xs text-slate-400">Total Custos Variáveis (Insumos)</span>
-          <div id="costTotalVariable" class="text-xl font-bold text-amber-400 mt-1">R$ 0,00</div>
+          <div id="costTotalVariable" class="text-lg sm:text-xl font-bold text-amber-400 mt-1">R$ 0,00</div>
           <span class="text-[11px] text-slate-500">Fornecedores, embalagens, motoboy</span>
         </div>
 
         <div class="glass-card rounded-2xl p-4 border border-slate-800">
           <span class="text-xs text-slate-400">Total Despesas do Mês</span>
-          <div id="costTotalAll" class="text-xl font-bold text-red-400 mt-1">R$ 0,00</div>
+          <div id="costTotalAll" class="text-lg sm:text-xl font-bold text-red-400 mt-1">R$ 0,00</div>
           <span class="text-[11px] text-slate-500">Impacto total no fluxo de caixa</span>
         </div>
       </div>
 
       <!-- Expenses Table -->
       <div class="glass-card rounded-2xl border border-slate-800 overflow-hidden">
+        <div class="px-3.5 py-2 text-[11px] text-slate-400 bg-slate-900/60 border-b border-slate-800 flex items-center justify-between sm:hidden">
+          <span class="flex items-center gap-1.5">
+            <i data-lucide="arrow-left-right" class="w-3.5 h-3.5 text-pink-400"></i>
+            <span>Deslize para ver todas as despesas</span>
+          </span>
+          <span class="text-[10px] text-slate-500 font-mono">Tabela Completa</span>
+        </div>
         <div class="overflow-x-auto custom-scrollbar">
-          <table class="w-full text-left text-xs">
+          <table class="w-full text-left text-xs min-w-[700px]">
             <thead class="bg-slate-900/80 text-slate-400 uppercase tracking-wider text-[10px] border-b border-slate-800">
               <tr>
                 <th class="py-3 px-4">Descrição da Conta</th>
@@ -432,35 +462,35 @@
     <!-- TAB 5: IA WHATSAPP STATUS -->
     <div id="tab-ia" class="tab-content hidden space-y-6">
       
-      <div class="glass-card rounded-2xl p-6 border border-slate-800">
-        <div class="flex items-start justify-between flex-wrap gap-4">
-          <div class="flex items-center gap-4">
-            <div id="agentAvatarBig" class="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-lg border border-white/10" style="background: rgba(249, 115, 22, 0.2);">
+      <div class="glass-card rounded-2xl p-4 sm:p-6 border border-slate-800">
+        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div class="flex items-center gap-3.5 sm:gap-4">
+            <div id="agentAvatarBig" class="w-13 h-13 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl shadow-lg border border-white/10 shrink-0" style="background: rgba(249, 115, 22, 0.2);">
               🍕
             </div>
-            <div>
+            <div class="min-w-0">
               <div class="flex items-center gap-2">
-                <h3 id="agentNameBig" class="text-lg font-bold text-white">Luigi</h3>
-                <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <h3 id="agentNameBig" class="text-base sm:text-lg font-bold text-white">Luigi</h3>
+                <span class="text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                   Online 24h
                 </span>
               </div>
-              <p id="agentRoleBig" class="text-xs text-slate-400 mt-0.5">
+              <p id="agentRoleBig" class="text-xs text-slate-400 mt-0.5 truncate">
                 Atendente Virtual & Delivery da Forno & Sabor Pizzaria Artesanal
               </p>
               <p class="text-xs text-slate-400 mt-1">
-                Linha de WhatsApp Conectada: <span id="agentPhoneBig" class="text-slate-200 font-semibold">+55 11 96557-4389</span>
+                WhatsApp: <span id="agentPhoneBig" class="text-slate-200 font-semibold">+55 11 96557-4389</span>
               </p>
             </div>
           </div>
 
-          <button onclick="openWhatsAppChat()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 flex items-center gap-2 transition cursor-pointer">
+          <button onclick="openWhatsAppChat()" class="w-full sm:w-auto justify-center px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 flex items-center gap-2 transition cursor-pointer">
             <i data-lucide="message-circle" class="w-4 h-4"></i>
             <span>Testar Mensagem no WhatsApp</span>
           </button>
         </div>
 
-        <div class="mt-6 pt-5 border-t border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+        <div class="mt-5 sm:mt-6 pt-4 sm:pt-5 border-t border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 text-xs">
           <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800">
             <span class="text-slate-400 block mb-1">Capacidade de Resposta:</span>
             <span class="text-white font-bold">Imediata (menos de 2 segundos)</span>
@@ -481,8 +511,8 @@
   </div>
 
   <!-- MODAL: NOVA CONTA / DESPESA -->
-  <div id="modalNewExpense" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
-    <div class="glass-card rounded-3xl p-6 border border-slate-700 w-full max-w-md shadow-2xl relative">
+  <div id="modalNewExpense" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 hidden opacity-0 transition-opacity duration-300">
+    <div class="glass-card rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-700 w-full max-w-md shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-base font-bold text-white flex items-center gap-2">
           <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
@@ -548,8 +578,8 @@
   </div>
 
   <!-- MODAL: NOVO CLIENTE -->
-  <div id="modalNewClient" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
-    <div class="glass-card rounded-3xl p-6 border border-slate-700 w-full max-w-md shadow-2xl relative">
+  <div id="modalNewClient" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 hidden opacity-0 transition-opacity duration-300">
+    <div class="glass-card rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-700 w-full max-w-md shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-base font-bold text-white flex items-center gap-2">
           <i data-lucide="user-plus" class="w-4 h-4 text-purple-400"></i>
@@ -585,8 +615,8 @@
   </div>
 
   <!-- MODAL: NOVO COLABORADOR / PARCEIRO -->
-  <div id="modalNewStaff" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
-    <div class="glass-card rounded-3xl p-6 border border-slate-700 w-full max-w-md shadow-2xl relative">
+  <div id="modalNewStaff" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 hidden opacity-0 transition-opacity duration-300">
+    <div class="glass-card rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-700 w-full max-w-md shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-base font-bold text-white flex items-center gap-2">
           <i data-lucide="user-check" class="w-4 h-4 text-purple-400"></i>
@@ -637,8 +667,8 @@
   </div>
 
   <!-- MODAL: DISPARO DE PROMOÇÃO RELÂMPAGO -->
-  <div id="modalCampaign" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
-    <div class="glass-card rounded-3xl p-6 border border-slate-700 w-full max-w-lg shadow-2xl relative">
+  <div id="modalCampaign" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 hidden opacity-0 transition-opacity duration-300">
+    <div class="glass-card rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-700 w-full max-w-lg shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
       <div class="flex items-center justify-between mb-4">
         <div>
           <h3 class="text-base font-bold text-white flex items-center gap-2">
@@ -834,18 +864,18 @@
 
       tbody.innerHTML = clients.map(c => `
         <tr class="hover:bg-slate-900/40 transition">
-          <td class="py-3 px-4 font-bold text-white flex items-center gap-2">
-            <div class="w-6 h-6 rounded-full bg-slate-800 text-purple-400 font-bold flex items-center justify-center text-[10px]">
+          <td class="py-3 px-4 font-bold text-white flex items-center gap-2 whitespace-nowrap">
+            <div class="w-6 h-6 rounded-full bg-slate-800 text-purple-400 font-bold flex items-center justify-center text-[10px] shrink-0">
               ${c.name.substring(0, 2).toUpperCase()}
             </div>
             <span>${c.name}</span>
           </td>
-          <td class="py-3 px-4 text-slate-300 font-mono text-[11px]">${c.phone}</td>
-          <td class="py-3 px-4">${c.totalOrders} pedidos</td>
-          <td class="py-3 px-4 font-semibold text-emerald-400">${formatCurrency(c.totalSpent)}</td>
-          <td class="py-3 px-4 text-slate-400">${c.lastOrderDate}</td>
+          <td class="py-3 px-4 text-slate-300 font-mono text-[11px] whitespace-nowrap">${c.phone}</td>
+          <td class="py-3 px-4 whitespace-nowrap">${c.totalOrders} pedidos</td>
+          <td class="py-3 px-4 font-semibold text-emerald-400 whitespace-nowrap">${formatCurrency(c.totalSpent)}</td>
+          <td class="py-3 px-4 text-slate-400 whitespace-nowrap">${c.lastOrderDate}</td>
           <td class="py-3 px-4 text-slate-300 max-w-xs truncate">${c.favoriteItem || '-'}</td>
-          <td class="py-3 px-4 text-center">
+          <td class="py-3 px-4 text-center whitespace-nowrap">
             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
               c.status === 'ATIVO' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
               c.status === 'NOVO' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
@@ -940,20 +970,20 @@
 
       tbody.innerHTML = filtered.map(e => `
         <tr class="hover:bg-slate-900/40 transition">
-          <td class="py-3 px-4 font-medium text-white">${e.description}</td>
-          <td class="py-3 px-4 text-slate-400">${e.category || 'Geral'}</td>
-          <td class="py-3 px-4">
+          <td class="py-3 px-4 font-medium text-white whitespace-nowrap">${e.description}</td>
+          <td class="py-3 px-4 text-slate-400 whitespace-nowrap">${e.category || 'Geral'}</td>
+          <td class="py-3 px-4 whitespace-nowrap">
             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${
               e.type === 'FIXA' ? 'bg-pink-500/10 text-pink-400 border border-pink-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
             }">
               ${e.type === 'FIXA' ? 'Fixa / Recorrente' : 'Variável / Insumo'}
             </span>
           </td>
-          <td class="py-3 px-4 text-slate-300">${e.recurrence || 'Mensal'}</td>
-          <td class="py-3 px-4 text-slate-400">${e.supplier || '-'}</td>
-          <td class="py-3 px-4 text-slate-300">${e.dueDay ? `Todo dia ${e.dueDay}` : 'Sob demanda'}</td>
-          <td class="py-3 px-4 font-bold text-red-400">${formatCurrency(e.amount)}</td>
-          <td class="py-3 px-4 text-center">
+          <td class="py-3 px-4 text-slate-300 whitespace-nowrap">${e.recurrence || 'Mensal'}</td>
+          <td class="py-3 px-4 text-slate-400 whitespace-nowrap">${e.supplier || '-'}</td>
+          <td class="py-3 px-4 text-slate-300 whitespace-nowrap">${e.dueDay ? `Todo dia ${e.dueDay}` : 'Sob demanda'}</td>
+          <td class="py-3 px-4 font-bold text-red-400 whitespace-nowrap">${formatCurrency(e.amount)}</td>
+          <td class="py-3 px-4 text-center whitespace-nowrap">
             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${
               e.status === 'PAGO' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
             }">
@@ -970,9 +1000,9 @@
         const btn = document.getElementById(`expFilter-${t}`);
         if (btn) {
           if (t === type) {
-            btn.className = 'px-3 py-1.5 rounded-lg font-semibold bg-purple-600 text-white transition';
+            btn.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg font-semibold bg-purple-600 text-white transition';
           } else {
-            btn.className = 'px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition';
+            btn.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition';
           }
         }
       });
