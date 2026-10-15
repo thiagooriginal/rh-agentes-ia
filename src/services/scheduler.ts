@@ -72,6 +72,22 @@ export class SchedulerService {
             app.reminderSent24h = true;
           }
         }
+
+        // --- 4. LEMBRETE 2 HORAS ANTES ---
+        if (app.status === 'CONFIRMADO' && !app.reminderSent2h && app.date === todayStr) {
+          const [appHour, appMin] = app.startTime.split(':').map(Number);
+          const appDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), appHour, appMin);
+          const diffMs = appDate.getTime() - now.getTime();
+          const diffMinutes = Math.floor(diffMs / 60000);
+
+          // Se faltar entre 30 e 130 minutos (em torno de 2 horas antes)
+          if (diffMinutes > 0 && diffMinutes <= 130) {
+            console.log(`[Scheduler] Enviando lembrete de 2h para ${app.clientName}...`);
+            const reminder2hMsg = `Oi, ${app.clientName}! ⏰ Passando para lembrar que seu atendimento de *${app.serviceName}* com ${app.professionalName} é hoje às *${app.startTime}* (daqui a aprox. 2 horas)!\n\n📍 ${establishment.address}\n\nEstamos te esperando com muito carinho! ✨`;
+            await whatsappService.sendMessageToClient(app.clientPhone, reminder2hMsg);
+            app.reminderSent2h = true;
+          }
+        }
       }
 
       // --- 4. RECORRÊNCIA DE DESPESAS ---

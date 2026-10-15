@@ -620,7 +620,7 @@ DIRETRIZES GERAIS:
 
     try {
       const persona = demoService.getPersona(niche);
-      const systemInstruction = persona.systemInstruction(clientName);
+      const systemInstruction = persona.systemInstruction(clientName, clientPhone);
 
       const history = storage.getConversationHistory(clientPhone);
       // Pega histórico anterior (exceto a mensagem atual que acabamos de salvar)

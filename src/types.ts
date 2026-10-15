@@ -317,7 +317,7 @@ export interface PersonaConfig {
   features: string[];
   sampleQuestions: string[];
   openerMessage: (leadName: string) => string;
-  systemInstruction: (leadName: string) => string;
+  systemInstruction: (leadName: string, leadPhone?: string) => string;
 }
 
 export interface WhatsAppState {
