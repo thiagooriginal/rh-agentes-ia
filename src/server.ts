@@ -11,6 +11,8 @@ import { portalWhatsAppService } from './services/portal-whatsapp.js';
 import { googleCalendar } from './services/calendar.js';
 import { campaignService } from './services/campaign.js';
 import { demoService } from './services/demo.js';
+import { dashboardDemoService } from './services/dashboard-demo.js';
+import { DemoNiche } from './types.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'salao-beauty-secret-token-2026';
 
@@ -465,6 +467,44 @@ export function createServer() {
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
+  });
+
+  // --- DASHBOARD DEMO PERSONALIZADO POR NICHO ---
+  app.get('/api/demo/dashboard/:niche', (req, res) => {
+    const niche = (req.params.niche || 'pizzaria') as DemoNiche;
+    const data = dashboardDemoService.getDashboard(niche);
+    res.json(data);
+  });
+
+  app.post('/api/demo/dashboard/:niche/expense', (req, res) => {
+    const niche = (req.params.niche || 'pizzaria') as DemoNiche;
+    const exp = dashboardDemoService.addExpense(niche, req.body);
+    res.json({ success: true, expense: exp });
+  });
+
+  app.post('/api/demo/dashboard/:niche/client', (req, res) => {
+    const niche = (req.params.niche || 'pizzaria') as DemoNiche;
+    const cli = dashboardDemoService.addClient(niche, req.body);
+    res.json({ success: true, client: cli });
+  });
+
+  app.post('/api/demo/dashboard/:niche/staff', (req, res) => {
+    const niche = (req.params.niche || 'pizzaria') as DemoNiche;
+    const stf = dashboardDemoService.addStaff(niche, req.body);
+    res.json({ success: true, staff: stf });
+  });
+
+  app.post('/api/demo/dashboard/:niche/campaign', (req, res) => {
+    const niche = (req.params.niche || 'pizzaria') as DemoNiche;
+    const cmp = dashboardDemoService.addCampaign(niche, {
+      title: req.body.title || 'Promoção Relâmpago WhatsApp',
+      message: req.body.message || 'Olá {nome}!',
+      targetCount: Number(req.body.targetCount) || 150,
+      status: 'CONCLUIDA',
+      date: new Date().toLocaleDateString('pt-BR'),
+      conversionRate: '32.5%'
+    });
+    res.json({ success: true, campaign: cmp, message: 'Campanha registrada e disparada com sucesso em segundo plano!' });
   });
 
   return app;

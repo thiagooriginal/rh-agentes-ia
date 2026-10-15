@@ -14,6 +14,7 @@ import { storage } from '../db/storage.js';
 import { demoService, NICHE_PERSONAS } from './demo.js';
 import { DemoNiche, WhatsAppState } from '../types.js';
 import { geocodingService } from './geocoding.js';
+import { dashboardDemoService } from './dashboard-demo.js';
 
 // Desembrulha mensagens de estruturas como deviceSentMessage, ephemeralMessage, viewOnceMessage, editedMessage
 function unwrapMessage(m: any): any {
@@ -295,6 +296,40 @@ export class PortalWhatsAppService {
             continue;
           }
 
+          // Busca lead ativo no serviço de demonstração
+          let lead = demoService.getActiveLead(resolvedPhone) || demoService.getActiveLead(cleanClientPhone);
+
+          // Comando do Dashboard / Painel Gerencial
+          const isPainelRequest =
+            cmd === 'painel' ||
+            cmd === '!painel' ||
+            cmd === 'dashboard' ||
+            cmd === 'ver painel' ||
+            cmd === 'meu painel' ||
+            cmd === 'link painel';
+
+          if (isPainelRequest) {
+            const currentNiche: DemoNiche = lead ? lead.niche : 'pizzaria';
+            const persona = demoService.getPersona(currentNiche);
+            const dashLink = dashboardDemoService.getDashboardLink(currentNiche, resolvedPhone);
+
+            const painelMsg = `📊✨ *PAINEL DE GESTÃO DO(A) ${persona.businessName.toUpperCase()}*\n\n` +
+              `Acesse seu Dashboard Gerencial em tempo real:\n` +
+              `👉 *Link de Acesso:* ${dashLink}\n\n` +
+              `🚀 *O que você pode gerenciar neste Painel:*\n` +
+              `• 💰 *Financeiro & DRE:* Faturamento do mês, ticket médio, margem de lucro e gráficos diários.\n` +
+              `• 👥 *Clientes & Promoções:* Cadastro dos clientes captados no WhatsApp + disparador de promoções com proteção anti-ban.\n` +
+              `• 💼 *Equipe & Parceiros:* Controle de colaboradores, comissões % e repasses automáticos.\n` +
+              `• 💸 *Custos & Contas:* Controle de despesas fixas (aluguel, energia, internet) e variáveis (fornecedores, insumos).\n` +
+              `• 🤖 *Secretária de IA:* Acompanhamento em tempo real dos atendimentos e conversões 24h.\n\n` +
+              `💡 _Clique no link acima para abrir o painel interativo agora mesmo no seu celular ou computador!_`;
+
+            const targetJid = remoteJid.endsWith('@lid') ? `${resolvedPhone}@s.whatsapp.net` : remoteJid;
+            await this.sock?.sendMessage(targetJid, { text: painelMsg });
+            storage.saveConversationMessage(cleanClientPhone, 'assistant', painelMsg);
+            continue;
+          }
+
           // Verifica se o portal está pausado
           if (storage.isPortalAiPaused()) {
             console.log(`[Portal WhatsApp ⏸️ Pausado] Mensagem de ${resolvedPhone} ignorada.`);
@@ -310,10 +345,7 @@ export class PortalWhatsAppService {
           // Evita auto-eco
           if (this.recentBotReplies.has(trimmedMessage)) continue;
 
-          // Busca lead ativo no serviço de demonstração
-          let lead = demoService.getActiveLead(resolvedPhone) || demoService.getActiveLead(cleanClientPhone);
-
-          // Se não há lead ativo, permite escolher um nicho diretamente por número (1 a 6) ou envia o menu de boas-vindas
+          // Se não há lead ativo, permite escolher um nicho diretamente por número (1 a 7) ou envia o menu de boas-vindas
           if (!lead) {
             const nicheChoiceMap: Record<string, DemoNiche> = {
               '1': 'petshop',
@@ -321,7 +353,8 @@ export class PortalWhatsAppService {
               '3': 'dentista',
               '4': 'medico',
               '5': 'cabeleireiro',
-              '6': 'pessoal'
+              '6': 'pessoal',
+              '7': 'pizzaria'
             };
 
             const chosenNiche = nicheChoiceMap[trimmedMessage];
@@ -334,7 +367,7 @@ export class PortalWhatsAppService {
             } else {
               // Responde menu interativo convidando para testar
               const targetJid = remoteJid.endsWith('@lid') ? `${resolvedPhone}@s.whatsapp.net` : remoteJid;
-              const menuMsg = `Olá, ${clientName}! 🤖✨ Bem-vindo ao *RH de Agentes IA*!\n\nAqui você pode recrutar colaboradores digitais inteligentes de alta performance para o WhatsApp do seu negócio.\n\nEscolha qual colaborador você quer entrevistar agora:\n\n🐾 Digite *1* para *Pet Shop & Veterinária* (Bob)\n💆‍♀️ Digite *2* para *Clínica de Estética* (Camila)\n🦷 Digite *3* para *Consultório Odontológico* (Dra. Mariana)\n🩺 Digite *4* para *Secretária Médica* (Helena)\n✂️ Digite *5* para *Salão & Barbearia* (Sofia)\n👔 Digite *6* para *Assistente Executivo & Finanças* (Jarvis)\n\n_Ou acesse nossa vitrine completa pelo navegador!_`;
+              const menuMsg = `Olá, ${clientName}! 🤖✨ Bem-vindo ao *RH de Agentes IA*!\n\nAqui você pode recrutar colaboradores digitais inteligentes de alta performance para o WhatsApp do seu negócio.\n\nEscolha qual colaborador você quer entrevistar agora:\n\n🐾 Digite *1* para *Pet Shop & Veterinária* (Bob)\n💆‍♀️ Digite *2* para *Clínica de Estética* (Camila)\n🦷 Digite *3* para *Consultório Odontológico* (Dra. Mariana)\n🩺 Digite *4* para *Secretária Médica* (Helena)\n✂️ Digite *5* para *Salão & Barbearia* (Sofia)\n👔 Digite *6* para *Assistente Executivo & Finanças* (Jarvis)\n🍕 Digite *7* para *Pizzaria & Delivery* (Luigi)\n\n_Ou acesse nossa vitrine completa pelo navegador!_`;
               await this.sock?.sendMessage(targetJid, { text: menuMsg });
               continue;
             }

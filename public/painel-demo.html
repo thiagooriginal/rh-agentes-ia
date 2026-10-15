@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Gerencial • RH de Agentes IA</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(51, 65, 85, 0.6);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.5);
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-purple-600 selection:text-white">
+
+  <!-- Topbar Header -->
+  <header class="border-b border-slate-800/80 bg-slate-900/90 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      
+      <!-- Brand & Active Niche -->
+      <div class="flex items-center space-x-3">
+        <div id="nicheIconBadge" class="w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-lg border border-white/10" style="background: rgba(249, 115, 22, 0.2);">
+          🍕
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 id="dashBusinessTitle" class="text-sm sm:text-base font-bold tracking-tight text-white">
+              Forno & Sabor Pizzaria Artesanal
+            </h1>
+            <span id="dashBadge" class="text-[10px] font-semibold px-2 py-0.5 rounded-full border hidden sm:inline-block" style="background: rgba(249, 115, 22, 0.15); color: #f97316; border-color: rgba(249, 115, 22, 0.4);">
+              Pizzaria & Delivery
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 flex items-center gap-1.5">
+            <span>Agente IA: <strong id="dashAgentName" class="text-slate-200">Luigi</strong></span>
+            <span>•</span>
+            <span class="inline-flex items-center gap-1 text-emerald-400 font-medium">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              WhatsApp 24h Ativo
+            </span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Niche Switcher & Actions -->
+      <div class="flex items-center space-x-3">
+        
+        <!-- Niche Selector Dropdown -->
+        <div class="relative">
+          <select id="nicheSelector" onchange="changeNiche(this.value)" class="bg-slate-900 border border-slate-700 text-slate-200 text-xs font-semibold rounded-xl px-3 py-2 pr-8 focus:outline-none focus:border-purple-500 cursor-pointer transition appearance-none">
+            <option value="pizzaria">🍕 Pizzaria & Delivery (Luigi)</option>
+            <option value="petshop">🐾 Pet Shop & Vet (Bob)</option>
+            <option value="estetica">✨ Clínica de Estética (Camila)</option>
+            <option value="dentista">🦷 Consultório Odonto (Mariana)</option>
+            <option value="medico">🩺 Clínica Médica (Helena)</option>
+            <option value="cabeleireiro">✂️ Salão & Barbearia (Sofia)</option>
+            <option value="pessoal">👔 Gestão & Finanças (Jarvis)</option>
+          </select>
+          <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-3 pointer-events-none"></i>
+        </div>
+
+        <a href="/vitrine.html" class="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-medium transition">
+          <i data-lucide="store" class="w-3.5 h-3.5 text-purple-400"></i>
+          <span>Vitrine de IAs</span>
+        </a>
+
+        <button onclick="openWhatsAppChat()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 transition cursor-pointer">
+          <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Conversar no WhatsApp</span>
+          <span class="sm:hidden">WhatsApp</span>
+        </button>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full space-y-6">
+
+    <!-- KPI Summary Row -->
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3.5">
+      
+      <!-- KPI 1: Faturamento -->
+      <div class="glass-card rounded-2xl p-4 border border-slate-800">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs text-slate-400 font-medium">Faturamento Mensal</span>
+          <div class="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+            <i data-lucide="trending-up" class="w-4 h-4"></i>
+          </div>
+        </div>
+        <div id="kpiRevenue" class="text-xl sm:text-2xl font-extrabold text-white">R$ 0,00</div>
+        <div class="text-[11px] text-emerald-400 mt-1 flex items-center gap-1">
+          <i data-lucide="arrow-up-right" class="w-3 h-3"></i>
+          <span>+18.4% vs mês anterior</span>
+        </div>
+      </div>
+
+      <!-- KPI 2: Lucro Líquido -->
+      <div class="glass-card rounded-2xl p-4 border border-slate-800">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs text-slate-400 font-medium">Lucro Líquido</span>
+          <div class="w-7 h-7 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center">
+            <i data-lucide="wallet" class="w-4 h-4"></i>
+          </div>
+        </div>
+        <div id="kpiProfit" class="text-xl sm:text-2xl font-extrabold text-white">R$ 0,00</div>
+        <div id="kpiMargin" class="text-[11px] text-purple-300 mt-1">Margem: 0%</div>
+      </div>
+
+      <!-- KPI 3: Pedidos / Atendimentos -->
+      <div class="glass-card rounded-2xl p-4 border border-slate-800">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs text-slate-400 font-medium">Total de Pedidos</span>
+          <div class="w-7 h-7 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center">
+            <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+          </div>
+        </div>
+        <div id="kpiOrders" class="text-xl sm:text-2xl font-extrabold text-white">0</div>
+        <div class="text-[11px] text-slate-400 mt-1">Pedidos concluídos</div>
+      </div>
+
+      <!-- KPI 4: Ticket Médio -->
+      <div class="glass-card rounded-2xl p-4 border border-slate-800">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs text-slate-400 font-medium">Ticket Médio</span>
+          <div class="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
+            <i data-lucide="receipt" class="w-4 h-4"></i>
+          </div>
+        </div>
+        <div id="kpiTicket" class="text-xl sm:text-2xl font-extrabold text-white">R$ 0,00</div>
+        <div class="text-[11px] text-slate-400 mt-1">Média por cliente</div>
+      </div>
+
+      <!-- KPI 5: Conversão IA -->
+      <div class="glass-card rounded-2xl p-4 border border-slate-800 col-span-2 lg:col-span-1">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs text-slate-400 font-medium">Conversão WhatsApp IA</span>
+          <div class="w-7 h-7 rounded-lg bg-pink-500/10 text-pink-400 flex items-center justify-center">
+            <i data-lucide="bot" class="w-4 h-4"></i>
+          </div>
+        </div>
+        <div id="kpiAiRate" class="text-xl sm:text-2xl font-extrabold text-white">96.4%</div>
+        <div class="text-[11px] text-emerald-400 mt-1">Sem filas e 24h ativo</div>
+      </div>
+
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="flex items-center gap-2 border-b border-slate-800 pb-3 overflow-x-auto custom-scrollbar">
+      <button onclick="switchTab('financeiro')" id="tabBtn-financeiro" class="tab-button px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 bg-purple-600 text-white shadow-lg shadow-purple-600/30">
+        <i data-lucide="dollar-sign" class="w-4 h-4"></i>
+        <span>Financeiro & DRE</span>
+      </button>
+
+      <button onclick="switchTab('clientes')" id="tabBtn-clientes" class="tab-button px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent">
+        <i data-lucide="users" class="w-4 h-4"></i>
+        <span>Clientes & Promoções</span>
+      </button>
+
+      <button onclick="switchTab('equipe')" id="tabBtn-equipe" class="tab-button px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent">
+        <i data-lucide="user-check" class="w-4 h-4"></i>
+        <span>Equipe & Parceiros</span>
+      </button>
+
+      <button onclick="switchTab('custos')" id="tabBtn-custos" class="tab-button px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent">
+        <i data-lucide="pie-chart" class="w-4 h-4"></i>
+        <span>Custos & Contas (Fixas/Variáveis)</span>
+      </button>
+
+      <button onclick="switchTab('ia')" id="tabBtn-ia" class="tab-button px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent">
+        <i data-lucide="sparkles" class="w-4 h-4 text-purple-400"></i>
+        <span>Atendimento IA WhatsApp</span>
+      </button>
+    </div>
+
+    <!-- TAB 1: FINANCEIRO & DRE -->
+    <div id="tab-financeiro" class="tab-content space-y-6">
+      
+      <!-- Chart + DRE Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Daily Evolution Chart (2 cols) -->
+        <div class="glass-card rounded-2xl p-5 lg:col-span-2 border border-slate-800">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i data-lucide="bar-chart-2" class="w-4 h-4 text-purple-400"></i>
+                <span>Fluxo Diário: Faturamento x Custos</span>
+              </h3>
+              <p class="text-xs text-slate-400">Desempenho da semana consolidado</p>
+            </div>
+            <div class="flex items-center gap-4 text-xs">
+              <span class="flex items-center gap-1.5 text-emerald-400 font-medium">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span> Faturamento
+              </span>
+              <span class="flex items-center gap-1.5 text-pink-400 font-medium">
+                <span class="w-2.5 h-2.5 rounded-full bg-pink-400"></span> Custos
+              </span>
+            </div>
+          </div>
+          <div class="h-64 sm:h-72">
+            <canvas id="dailyRevenueChart"></canvas>
+          </div>
+        </div>
+
+        <!-- DRE Resumido (1 col) -->
+        <div class="glass-card rounded-2xl p-5 border border-slate-800 flex flex-col justify-between">
+          <div>
+            <h3 class="text-sm font-bold text-white flex items-center gap-2 mb-1">
+              <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-400"></i>
+              <span>Demonstrativo DRE</span>
+            </h3>
+            <p class="text-xs text-slate-400 mb-4">Mês Corrente • Resultados Reais</p>
+
+            <div class="space-y-3 text-xs">
+              <div class="flex justify-between py-1.5 border-b border-slate-800/80">
+                <span class="text-slate-300 font-semibold">(+) Faturamento Bruto</span>
+                <span id="dreGrossRevenue" class="text-emerald-400 font-bold">R$ 0,00</span>
+              </div>
+              <div class="flex justify-between py-1.5 border-b border-slate-800/80">
+                <span class="text-slate-400">(-) Custos Fixos Mensais</span>
+                <span id="dreFixedCosts" class="text-pink-400 font-medium">- R$ 0,00</span>
+              </div>
+              <div class="flex justify-between py-1.5 border-b border-slate-800/80">
+                <span class="text-slate-400">(-) Custos Variáveis / Insumos</span>
+                <span id="dreVariableCosts" class="text-amber-400 font-medium">- R$ 0,00</span>
+              </div>
+              <div class="flex justify-between py-1.5 border-b border-slate-800/80">
+                <span class="text-slate-400">(=) Total de Despesas</span>
+                <span id="dreTotalCosts" class="text-red-400 font-bold">- R$ 0,00</span>
+              </div>
+              <div class="flex justify-between py-2.5 bg-slate-900/80 px-3 rounded-xl border border-slate-800">
+                <span class="text-white font-bold">(=) Lucro Líquido</span>
+                <span id="dreNetProfit" class="text-purple-300 font-black text-sm">R$ 0,00</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+            <span>Eficiência Operacional:</span>
+            <span class="text-emerald-400 font-bold">Altamente Lucrativo</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- TAB 2: CLIENTES & PROMOÇÕES -->
+    <div id="tab-clientes" class="tab-content hidden space-y-6">
+      
+      <!-- Action Bar -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <i data-lucide="users" class="w-4 h-4 text-purple-400"></i>
+            <span>Base de Clientes Cadastrados pelo WhatsApp</span>
+          </h3>
+          <p class="text-xs text-slate-400">Contatos captados automaticamente pelo agente digital durante o atendimento.</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="openNewClientModal()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+            <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+            <span>+ Novo Cliente</span>
+          </button>
+
+          <button onclick="openCampaignModal()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-bold shadow-lg shadow-purple-600/30 flex items-center gap-1.5 transition cursor-pointer">
+            <i data-lucide="megaphone" class="w-3.5 h-3.5"></i>
+            <span>Disparar Promoção (Anti-Ban)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Clients Table -->
+      <div class="glass-card rounded-2xl border border-slate-800 overflow-hidden">
+        <div class="overflow-x-auto custom-scrollbar">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-900/80 text-slate-400 uppercase tracking-wider text-[10px] border-b border-slate-800">
+              <tr>
+                <th class="py-3 px-4">Cliente</th>
+                <th class="py-3 px-4">WhatsApp</th>
+                <th class="py-3 px-4">Pedidos / Atendimentos</th>
+                <th class="py-3 px-4">Total Gasto</th>
+                <th class="py-3 px-4">Último Contato</th>
+                <th class="py-3 px-4">Preferência / Item Favorito</th>
+                <th class="py-3 px-4 text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody id="clientsTableBody" class="divide-y divide-slate-800/60 text-slate-200">
+              <!-- Preenchido via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Campaigns History -->
+      <div class="glass-card rounded-2xl p-5 border border-slate-800 space-y-4">
+        <div class="flex items-center justify-between">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+            <i data-lucide="history" class="w-3.5 h-3.5 text-pink-400"></i>
+            <span>Histórico de Campanhas Promocionais Disparadas</span>
+          </h4>
+          <span class="text-[11px] text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20 font-semibold">
+            Proteção Anti-Ban Ativa (25s a 55s)
+          </span>
+        </div>
+
+        <div id="campaignsList" class="space-y-2.5">
+          <!-- Preenchido via JS -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- TAB 3: EQUIPE & PARCEIROS -->
+    <div id="tab-equipe" class="tab-content hidden space-y-6">
+      
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <i data-lucide="user-check" class="w-4 h-4 text-purple-400"></i>
+            <span>Equipe, Funcionários & Parceiros de Entrega</span>
+          </h3>
+          <p class="text-xs text-slate-400">Controle de repasses, salários fixos, comissões e produtividade mensal.</p>
+        </div>
+
+        <button onclick="openNewStaffModal()" class="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-lg shadow-purple-600/30 flex items-center gap-1.5 transition cursor-pointer">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+          <span>+ Adicionar Colaborador / Parceiro</span>
+        </button>
+      </div>
+
+      <!-- Staff Grid -->
+      <div id="staffGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Preenchido via JS -->
+      </div>
+
+    </div>
+
+    <!-- TAB 4: CUSTOS & CONTAS (FIXAS E VARIÁVEIS) -->
+    <div id="tab-custos" class="tab-content hidden space-y-6">
+      
+      <!-- Top Filters & Actions -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <i data-lucide="pie-chart" class="w-4 h-4 text-pink-400"></i>
+            <span>Controle de Custos e Contas a Pagar</span>
+          </h3>
+          <p class="text-xs text-slate-400">Gestão detalhada de despesas fixas recorrentes e custos variáveis de fornecedores.</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- Filtro de Tipo -->
+          <div class="inline-flex rounded-xl bg-slate-900 border border-slate-800 p-0.5 text-xs">
+            <button onclick="filterExpenses('TODAS')" id="expFilter-TODAS" class="px-3 py-1.5 rounded-lg font-semibold bg-purple-600 text-white transition">Todas</button>
+            <button onclick="filterExpenses('FIXA')" id="expFilter-FIXA" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">Fixas / Recorrentes</button>
+            <button onclick="filterExpenses('VARIAVEL')" id="expFilter-VARIAVEL" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">Variáveis / Insumos</button>
+          </div>
+
+          <button onclick="openNewExpenseModal()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 flex items-center gap-1.5 transition cursor-pointer">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            <span>+ Nova Conta / Despesa</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Expense Summary Badges -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="glass-card rounded-2xl p-4 border border-slate-800">
+          <span class="text-xs text-slate-400">Total Custos Fixos (Mensais)</span>
+          <div id="costTotalFixed" class="text-xl font-bold text-pink-400 mt-1">R$ 0,00</div>
+          <span class="text-[11px] text-slate-500">Aluguel, energia, internet, softwares</span>
+        </div>
+
+        <div class="glass-card rounded-2xl p-4 border border-slate-800">
+          <span class="text-xs text-slate-400">Total Custos Variáveis (Insumos)</span>
+          <div id="costTotalVariable" class="text-xl font-bold text-amber-400 mt-1">R$ 0,00</div>
+          <span class="text-[11px] text-slate-500">Fornecedores, embalagens, motoboy</span>
+        </div>
+
+        <div class="glass-card rounded-2xl p-4 border border-slate-800">
+          <span class="text-xs text-slate-400">Total Despesas do Mês</span>
+          <div id="costTotalAll" class="text-xl font-bold text-red-400 mt-1">R$ 0,00</div>
+          <span class="text-[11px] text-slate-500">Impacto total no fluxo de caixa</span>
+        </div>
+      </div>
+
+      <!-- Expenses Table -->
+      <div class="glass-card rounded-2xl border border-slate-800 overflow-hidden">
+        <div class="overflow-x-auto custom-scrollbar">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-900/80 text-slate-400 uppercase tracking-wider text-[10px] border-b border-slate-800">
+              <tr>
+                <th class="py-3 px-4">Descrição da Conta</th>
+                <th class="py-3 px-4">Categoria</th>
+                <th class="py-3 px-4">Tipo</th>
+                <th class="py-3 px-4">Recorrência</th>
+                <th class="py-3 px-4">Fornecedor / Favorecido</th>
+                <th class="py-3 px-4">Vencimento</th>
+                <th class="py-3 px-4">Valor</th>
+                <th class="py-3 px-4 text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody id="expensesTableBody" class="divide-y divide-slate-800/60 text-slate-200">
+              <!-- Preenchido via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- TAB 5: IA WHATSAPP STATUS -->
+    <div id="tab-ia" class="tab-content hidden space-y-6">
+      
+      <div class="glass-card rounded-2xl p-6 border border-slate-800">
+        <div class="flex items-start justify-between flex-wrap gap-4">
+          <div class="flex items-center gap-4">
+            <div id="agentAvatarBig" class="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-lg border border-white/10" style="background: rgba(249, 115, 22, 0.2);">
+              🍕
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 id="agentNameBig" class="text-lg font-bold text-white">Luigi</h3>
+                <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  Online 24h
+                </span>
+              </div>
+              <p id="agentRoleBig" class="text-xs text-slate-400 mt-0.5">
+                Atendente Virtual & Delivery da Forno & Sabor Pizzaria Artesanal
+              </p>
+              <p class="text-xs text-slate-400 mt-1">
+                Linha de WhatsApp Conectada: <span id="agentPhoneBig" class="text-slate-200 font-semibold">+55 11 96557-4389</span>
+              </p>
+            </div>
+          </div>
+
+          <button onclick="openWhatsAppChat()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 flex items-center gap-2 transition cursor-pointer">
+            <i data-lucide="message-circle" class="w-4 h-4"></i>
+            <span>Testar Mensagem no WhatsApp</span>
+          </button>
+        </div>
+
+        <div class="mt-6 pt-5 border-t border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800">
+            <span class="text-slate-400 block mb-1">Capacidade de Resposta:</span>
+            <span class="text-white font-bold">Imediata (menos de 2 segundos)</span>
+          </div>
+          <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800">
+            <span class="text-slate-400 block mb-1">Compreensão de Áudios:</span>
+            <span class="text-white font-bold">Ativa com Google Gemini</span>
+          </div>
+          <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800">
+            <span class="text-slate-400 block mb-1">Geolocalizador & Frete:</span>
+            <span class="text-emerald-400 font-bold">GPS, CEP e Endereço Ativos</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- MODAL: NOVA CONTA / DESPESA -->
+  <div id="modalNewExpense" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+    <div class="glass-card rounded-3xl p-6 border border-slate-700 w-full max-w-md shadow-2xl relative">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
+          <span>Cadastrar Nova Conta / Despesa</span>
+        </h3>
+        <button onclick="closeModal('modalNewExpense')" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <form onsubmit="submitNewExpense(event)" class="space-y-3.5 text-xs">
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1">Descrição da Conta *</label>
+          <input type="text" id="newExpDesc" required placeholder="Ex: Fornecedor de Embalagens, Energia, Aluguel" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Tipo de Custo *</label>
+            <select id="newExpType" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-purple-500">
+              <option value="FIXA">Conta Fixa / Recorrente</option>
+              <option value="VARIAVEL">Custo Variável / Insumo</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Recorrência</label>
+            <select id="newExpRecurrence" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-purple-500">
+              <option value="MENSAL">Mensal</option>
+              <option value="SEMANAL">Semanal</option>
+              <option value="PONTUAL">Pontual</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Valor (R$) *</label>
+            <input type="number" step="0.01" id="newExpAmount" required placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500">
+          </div>
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Dia do Vencimento</label>
+            <input type="number" min="1" max="31" id="newExpDueDay" placeholder="Ex: 10" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Categoria</label>
+            <input type="text" id="newExpCategory" placeholder="Ex: Insumos, Imóvel" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500">
+          </div>
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Fornecedor / Favorecido</label>
+            <input type="text" id="newExpSupplier" placeholder="Nome do fornecedor" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500">
+          </div>
+        </div>
+
+        <div class="pt-2 flex justify-end gap-2">
+          <button type="button" onclick="closeModal('modalNewExpense')" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition">Cancelar</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition shadow-lg shadow-emerald-600/30">Salvar Conta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: NOVO CLIENTE -->
+  <div id="modalNewClient" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+    <div class="glass-card rounded-3xl p-6 border border-slate-700 w-full max-w-md shadow-2xl relative">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="user-plus" class="w-4 h-4 text-purple-400"></i>
+          <span>Cadastrar Novo Cliente</span>
+        </h3>
+        <button onclick="closeModal('modalNewClient')" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <form onsubmit="submitNewClient(event)" class="space-y-3.5 text-xs">
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1">Nome Completo *</label>
+          <input type="text" id="newCliName" required placeholder="Ex: Camila Duarte" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500">
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1">Número de WhatsApp *</label>
+          <input type="text" id="newCliPhone" required placeholder="(11) 99999-8888" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500">
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1">Item / Preferência Favorita</label>
+          <input type="text" id="newCliFavorite" placeholder="Ex: Pizza Grande Calabresa com Borda" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500">
+        </div>
+
+        <div class="pt-2 flex justify-end gap-2">
+          <button type="button" onclick="closeModal('modalNewClient')" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition">Cancelar</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition shadow-lg shadow-purple-600/30">Cadastrar Cliente</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: NOVO COLABORADOR / PARCEIRO -->
+  <div id="modalNewStaff" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+    <div class="glass-card rounded-3xl p-6 border border-slate-700 w-full max-w-md shadow-2xl relative">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="user-check" class="w-4 h-4 text-purple-400"></i>
+          <span>Cadastrar Colaborador / Parceiro</span>
+        </h3>
+        <button onclick="closeModal('modalNewStaff')" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <form onsubmit="submitNewStaff(event)" class="space-y-3.5 text-xs">
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1">Nome do Profissional / Parceiro *</label>
+          <input type="text" id="newStfName" required placeholder="Ex: Lucas Motoboy, Dra. Fernanda" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500">
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1">Função / Especialidade *</label>
+          <input type="text" id="newStfRole" required placeholder="Ex: Entregador Parceiro, Pizzaiolo, Biomédica" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Modelo de Pagamento</label>
+            <select id="newStfModel" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-purple-500">
+              <option value="FIXO">Salário Fixo Mensal</option>
+              <option value="COMISSAO">Comissão Percentual (%)</option>
+              <option value="DIARIA">Diária / Por Entrega</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Valor (R$ ou %)</label>
+            <input type="number" id="newStfValue" required placeholder="Ex: 2500 ou 50" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1">Telefone WhatsApp</label>
+          <input type="text" id="newStfPhone" placeholder="(11) 98888-7777" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500">
+        </div>
+
+        <div class="pt-2 flex justify-end gap-2">
+          <button type="button" onclick="closeModal('modalNewStaff')" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition">Cancelar</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition shadow-lg shadow-purple-600/30">Cadastrar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: DISPARO DE PROMOÇÃO RELÂMPAGO -->
+  <div id="modalCampaign" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+    <div class="glass-card rounded-3xl p-6 border border-slate-700 w-full max-w-lg shadow-2xl relative">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <i data-lucide="megaphone" class="w-4 h-4 text-pink-400"></i>
+            <span>Disparar Campanha Promocional</span>
+          </h3>
+          <p class="text-xs text-slate-400">Envio automático para a base de clientes do WhatsApp</p>
+        </div>
+        <button onclick="closeModal('modalCampaign')" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <form onsubmit="submitCampaign(event)" class="space-y-3.5 text-xs">
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1">Título da Oferta / Campanha *</label>
+          <input type="text" id="cmpTitle" required placeholder="Ex: Sexta da Borda Grátis, 20% OFF no Botox" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500">
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1">Texto da Mensagem no WhatsApp *</label>
+          <textarea id="cmpMessage" rows="4" required placeholder="Oi {nome}! Temos uma condição imperdível hoje no WhatsApp..." class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"></textarea>
+          <span class="text-[10px] text-slate-400">Dica: Use a tag <code>{nome}</code> para personalizar o nome de cada cliente automaticamente!</span>
+        </div>
+
+        <!-- Anti-ban badge box -->
+        <div class="p-3 rounded-xl bg-purple-950/40 border border-purple-500/30 flex items-start gap-2.5">
+          <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>
+          <div class="text-[11px] text-purple-200">
+            <strong>Proteção Anti-Ban Ativada:</strong> Os envios ocorrem com intervalos aleatórios entre 25 e 55 segundos por cliente com simulação de digitação humana, protegendo 100% o seu número de WhatsApp.
+          </div>
+        </div>
+
+        <div class="pt-2 flex justify-end gap-2">
+          <button type="button" onclick="closeModal('modalCampaign')" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition">Cancelar</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold transition shadow-lg shadow-purple-600/30">
+            Iniciar Disparos Seguros
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let currentNiche = 'pizzaria';
+    let currentData = null;
+    let expenseFilter = 'TODAS';
+    let chartInstance = null;
+
+    // Inicialização da página
+    document.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const nicheParam = urlParams.get('niche');
+      if (nicheParam) {
+        currentNiche = nicheParam;
+        const sel = document.getElementById('nicheSelector');
+        if (sel) sel.value = nicheParam;
+      }
+      loadDashboardData();
+    });
+
+    async function loadDashboardData() {
+      try {
+        const res = await fetch(`/api/demo/dashboard/${currentNiche}`);
+        currentData = await res.json();
+        renderDashboard();
+      } catch (e) {
+        console.error('Erro ao carregar dados do dashboard:', e);
+      }
+    }
+
+    function changeNiche(newNiche) {
+      currentNiche = newNiche;
+      const url = new URL(window.location.href);
+      url.searchParams.set('niche', newNiche);
+      window.history.pushState({}, '', url);
+      loadDashboardData();
+    }
+
+    function renderDashboard() {
+      if (!currentData) return;
+
+      // Header & Badges
+      document.getElementById('dashBusinessTitle').textContent = currentData.businessName;
+      document.getElementById('dashBadge').textContent = currentData.badge;
+      document.getElementById('dashAgentName').textContent = currentData.agentName;
+      document.getElementById('nicheIconBadge').textContent = currentData.agentIcon;
+      document.getElementById('nicheIconBadge').style.background = `${currentData.themeColor}25`;
+
+      // Big Avatar Tab IA
+      const bigAvatar = document.getElementById('agentAvatarBig');
+      if (bigAvatar) {
+        bigAvatar.textContent = currentData.agentIcon;
+        bigAvatar.style.background = `${currentData.themeColor}25`;
+      }
+      const bigName = document.getElementById('agentNameBig');
+      if (bigName) bigName.textContent = currentData.agentName;
+      const bigRole = document.getElementById('agentRoleBig');
+      if (bigRole) bigRole.textContent = `Atendente Virtual de IA da ${currentData.businessName}`;
+
+      // KPIs
+      document.getElementById('kpiRevenue').textContent = formatCurrency(currentData.financial.monthlyRevenue);
+      document.getElementById('kpiProfit').textContent = formatCurrency(currentData.financial.netProfit);
+      document.getElementById('kpiMargin').textContent = `Margem Líquida: ${currentData.financial.profitMarginPercent}%`;
+      document.getElementById('kpiOrders').textContent = currentData.financial.totalOrders;
+      document.getElementById('kpiTicket').textContent = formatCurrency(currentData.financial.averageTicket);
+      document.getElementById('kpiAiRate').textContent = `${currentData.financial.aiConversionRate}%`;
+
+      // DRE Resumido
+      document.getElementById('dreGrossRevenue').textContent = formatCurrency(currentData.financial.monthlyRevenue);
+      document.getElementById('dreFixedCosts').textContent = `- ${formatCurrency(currentData.financial.monthlyFixedCosts)}`;
+      document.getElementById('dreVariableCosts').textContent = `- ${formatCurrency(currentData.financial.monthlyVariableCosts)}`;
+      document.getElementById('dreTotalCosts').textContent = `- ${formatCurrency(currentData.financial.totalCosts)}`;
+      document.getElementById('dreNetProfit').textContent = formatCurrency(currentData.financial.netProfit);
+
+      // Render Cost Badges
+      document.getElementById('costTotalFixed').textContent = formatCurrency(currentData.financial.monthlyFixedCosts);
+      document.getElementById('costTotalVariable').textContent = formatCurrency(currentData.financial.monthlyVariableCosts);
+      document.getElementById('costTotalAll').textContent = formatCurrency(currentData.financial.totalCosts);
+
+      // Render Chart
+      renderChart(currentData.financial.dailyChart, currentData.themeColor);
+
+      // Render Tables & Grids
+      renderClientsTable(currentData.clients);
+      renderCampaignsList(currentData.campaigns);
+      renderStaffGrid(currentData.staff);
+      renderExpensesTable(currentData.expenses);
+
+      lucide.createIcons();
+    }
+
+    function renderChart(dailyData, themeColor) {
+      const ctx = document.getElementById('dailyRevenueChart');
+      if (!ctx) return;
+
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+
+      const labels = dailyData.map(d => d.dayName);
+      const revenues = dailyData.map(d => d.revenue);
+      const costs = dailyData.map(d => d.costs);
+
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Faturamento (R$)',
+              data: revenues,
+              backgroundColor: '#10b981',
+              borderRadius: 8,
+              borderSkipped: false
+            },
+            {
+              label: 'Custos (R$)',
+              data: costs,
+              backgroundColor: '#ec4899',
+              borderRadius: 8,
+              borderSkipped: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans', size: 11 } }
+            },
+            y: {
+              grid: { color: 'rgba(51, 65, 85, 0.4)' },
+              ticks: {
+                color: '#94a3b8',
+                font: { family: 'Plus Jakarta Sans', size: 10 },
+                callback: v => `R$ ${v}`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderClientsTable(clients) {
+      const tbody = document.getElementById('clientsTableBody');
+      if (!tbody) return;
+
+      tbody.innerHTML = clients.map(c => `
+        <tr class="hover:bg-slate-900/40 transition">
+          <td class="py-3 px-4 font-bold text-white flex items-center gap-2">
+            <div class="w-6 h-6 rounded-full bg-slate-800 text-purple-400 font-bold flex items-center justify-center text-[10px]">
+              ${c.name.substring(0, 2).toUpperCase()}
+            </div>
+            <span>${c.name}</span>
+          </td>
+          <td class="py-3 px-4 text-slate-300 font-mono text-[11px]">${c.phone}</td>
+          <td class="py-3 px-4">${c.totalOrders} pedidos</td>
+          <td class="py-3 px-4 font-semibold text-emerald-400">${formatCurrency(c.totalSpent)}</td>
+          <td class="py-3 px-4 text-slate-400">${c.lastOrderDate}</td>
+          <td class="py-3 px-4 text-slate-300 max-w-xs truncate">${c.favoriteItem || '-'}</td>
+          <td class="py-3 px-4 text-center">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              c.status === 'ATIVO' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+              c.status === 'NOVO' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
+              'bg-slate-800 text-slate-400 border border-slate-700'
+            }">
+              ${c.status}
+            </span>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderCampaignsList(campaigns) {
+      const list = document.getElementById('campaignsList');
+      if (!list) return;
+
+      list.innerHTML = campaigns.map(cmp => `
+        <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-white">${cmp.title}</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 font-semibold">
+                ${cmp.targetCount} Clientes Atingidos
+              </span>
+            </div>
+            <p class="text-xs text-slate-400 mt-1 italic">"${cmp.message}"</p>
+          </div>
+          <div class="flex items-center gap-3 shrink-0 text-xs">
+            <span class="text-slate-400">${cmp.date}</span>
+            <span class="font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+              Taxa de Retorno: ${cmp.conversionRate || '28.5%'}
+            </span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderStaffGrid(staffList) {
+      const grid = document.getElementById('staffGrid');
+      if (!grid) return;
+
+      grid.innerHTML = staffList.map(s => `
+        <div class="glass-card rounded-2xl p-4 border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-slate-800 text-slate-200 font-bold flex items-center justify-center text-xs border border-slate-700">
+                  ${s.name.substring(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-white">${s.name}</h4>
+                  <span class="text-[11px] text-slate-400">${s.role}</span>
+                </div>
+              </div>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                ${s.status}
+              </span>
+            </div>
+
+            <div class="space-y-1.5 text-xs text-slate-300 py-2 border-y border-slate-800/80">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Modelo:</span>
+                <span class="font-medium">${s.model === 'COMISSAO' ? `Comissão (${s.commissionRate}%)` : s.model === 'FIXO' ? `Salário Fixo` : `Diária / Por Entrega`}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Remuneração:</span>
+                <span class="font-bold text-purple-300">${s.fixedSalary ? formatCurrency(s.fixedSalary) : `${s.commissionRate}% por atendimento`}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Telefone:</span>
+                <span class="text-slate-300 font-mono text-[11px]">${s.phone}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3 pt-2 flex items-center justify-between text-xs">
+            <span class="text-slate-400">Produção Mês:</span>
+            <span class="font-bold text-emerald-400">${formatCurrency(s.monthlyProduction)}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderExpensesTable(expenses) {
+      const tbody = document.getElementById('expensesTableBody');
+      if (!tbody) return;
+
+      const filtered = expenses.filter(e => {
+        if (expenseFilter === 'TODAS') return true;
+        return e.type === expenseFilter;
+      });
+
+      tbody.innerHTML = filtered.map(e => `
+        <tr class="hover:bg-slate-900/40 transition">
+          <td class="py-3 px-4 font-medium text-white">${e.description}</td>
+          <td class="py-3 px-4 text-slate-400">${e.category || 'Geral'}</td>
+          <td class="py-3 px-4">
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${
+              e.type === 'FIXA' ? 'bg-pink-500/10 text-pink-400 border border-pink-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+            }">
+              ${e.type === 'FIXA' ? 'Fixa / Recorrente' : 'Variável / Insumo'}
+            </span>
+          </td>
+          <td class="py-3 px-4 text-slate-300">${e.recurrence || 'Mensal'}</td>
+          <td class="py-3 px-4 text-slate-400">${e.supplier || '-'}</td>
+          <td class="py-3 px-4 text-slate-300">${e.dueDay ? `Todo dia ${e.dueDay}` : 'Sob demanda'}</td>
+          <td class="py-3 px-4 font-bold text-red-400">${formatCurrency(e.amount)}</td>
+          <td class="py-3 px-4 text-center">
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${
+              e.status === 'PAGO' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+            }">
+              ${e.status}
+            </span>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function filterExpenses(type) {
+      expenseFilter = type;
+      ['TODAS', 'FIXA', 'VARIAVEL'].forEach(t => {
+        const btn = document.getElementById(`expFilter-${t}`);
+        if (btn) {
+          if (t === type) {
+            btn.className = 'px-3 py-1.5 rounded-lg font-semibold bg-purple-600 text-white transition';
+          } else {
+            btn.className = 'px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition';
+          }
+        }
+      });
+      renderExpensesTable(currentData.expenses);
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById(`tab-${tabId}`)?.classList.remove('hidden');
+
+      document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('bg-purple-600', 'text-white', 'shadow-lg', 'shadow-purple-600/30');
+        btn.classList.add('text-slate-400', 'border-transparent');
+      });
+
+      const activeBtn = document.getElementById(`tabBtn-${tabId}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-slate-400', 'border-transparent');
+        activeBtn.classList.add('bg-purple-600', 'text-white', 'shadow-lg', 'shadow-purple-600/30');
+      }
+      lucide.createIcons();
+    }
+
+    // Modal Helpers
+    function openModal(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove('hidden');
+      setTimeout(() => el.classList.remove('opacity-0'), 10);
+      lucide.createIcons();
+    }
+
+    function closeModal(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add('opacity-0');
+      setTimeout(() => el.classList.add('hidden'), 300);
+    }
+
+    function openNewExpenseModal() { openModal('modalNewExpense'); }
+    function openNewClientModal() { openModal('modalNewClient'); }
+    function openNewStaffModal() { openModal('modalNewStaff'); }
+    function openCampaignModal() { openModal('modalCampaign'); }
+
+    // Forms Submissions
+    async function submitNewExpense(e) {
+      e.preventDefault();
+      const payload = {
+        description: document.getElementById('newExpDesc').value,
+        type: document.getElementById('newExpType').value,
+        recurrence: document.getElementById('newExpRecurrence').value,
+        amount: parseFloat(document.getElementById('newExpAmount').value) || 0,
+        dueDay: parseInt(document.getElementById('newExpDueDay').value) || undefined,
+        category: document.getElementById('newExpCategory').value || 'Geral',
+        supplier: document.getElementById('newExpSupplier').value || undefined,
+        status: 'PENDENTE'
+      };
+
+      try {
+        await fetch(`/api/demo/dashboard/${currentNiche}/expense`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        closeModal('modalNewExpense');
+        loadDashboardData();
+      } catch (err) {
+        alert('Erro ao salvar despesa');
+      }
+    }
+
+    async function submitNewClient(e) {
+      e.preventDefault();
+      const payload = {
+        name: document.getElementById('newCliName').value,
+        phone: document.getElementById('newCliPhone').value,
+        whatsapp: document.getElementById('newCliPhone').value.replace(/\D/g, ''),
+        favoriteItem: document.getElementById('newCliFavorite').value,
+        totalOrders: 1,
+        totalSpent: currentData.financial.averageTicket,
+        lastOrderDate: 'Hoje',
+        status: 'NOVO'
+      };
+
+      try {
+        await fetch(`/api/demo/dashboard/${currentNiche}/client`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        closeModal('modalNewClient');
+        loadDashboardData();
+      } catch (err) {
+        alert('Erro ao salvar cliente');
+      }
+    }
+
+    async function submitNewStaff(e) {
+      e.preventDefault();
+      const val = parseFloat(document.getElementById('newStfValue').value) || 0;
+      const model = document.getElementById('newStfModel').value;
+      const payload = {
+        name: document.getElementById('newStfName').value,
+        role: document.getElementById('newStfRole').value,
+        model,
+        fixedSalary: model === 'FIXO' ? val : undefined,
+        commissionRate: model === 'COMISSAO' ? val : undefined,
+        phone: document.getElementById('newStfPhone').value || '(11) 99999-0000',
+        status: 'ATIVO',
+        monthlyProduction: 0
+      };
+
+      try {
+        await fetch(`/api/demo/dashboard/${currentNiche}/staff`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        closeModal('modalNewStaff');
+        loadDashboardData();
+      } catch (err) {
+        alert('Erro ao salvar colaborador');
+      }
+    }
+
+    async function submitCampaign(e) {
+      e.preventDefault();
+      const payload = {
+        title: document.getElementById('cmpTitle').value,
+        message: document.getElementById('cmpMessage').value,
+        targetCount: currentData.clients.length * 35 || 150
+      };
+
+      try {
+        const res = await fetch(`/api/demo/dashboard/${currentNiche}/campaign`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const d = await res.json();
+        alert('🚀 Campanha promocional iniciada com sucesso em segundo plano com proteção anti-ban!');
+        closeModal('modalCampaign');
+        loadDashboardData();
+      } catch (err) {
+        alert('Erro ao disparar campanha');
+      }
+    }
+
+    function openWhatsAppChat() {
+      const phone = '5511965574389';
+      const text = encodeURIComponent(`Olá! Quero ver o atendimento do ${currentData ? currentData.agentName : 'colaborador'}. Digite PAINEL.`);
+      window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
+    }
+
+    function formatCurrency(val) {
+      return (val || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+  </script>
+</body>
+</html>
