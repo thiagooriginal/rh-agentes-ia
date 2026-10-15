@@ -378,7 +378,8 @@ class StorageManager {
             conversations: parsed.conversations || {},
             humanInterventionFlags: parsed.humanInterventionFlags || {},
             campaigns: parsed.campaigns || [],
-            demoLeads: parsed.demoLeads || []
+            demoLeads: parsed.demoLeads || [],
+            globalAiPaused: parsed.globalAiPaused !== undefined ? parsed.globalAiPaused : true
           };
         }
       }
@@ -401,7 +402,8 @@ class StorageManager {
       conversations: {},
       humanInterventionFlags: {},
       campaigns: [],
-      demoLeads: []
+      demoLeads: [],
+      globalAiPaused: true
     };
 
     // Cria alguns agendamentos demonstrativos
@@ -1333,6 +1335,17 @@ class StorageManager {
       const s2 = clean.slice(-8);
       return s1.length >= 8 && s1 === s2;
     });
+  }
+
+  // --- PAUSA GLOBAL DE INTELIGÊNCIA ARTIFICIAL ---
+  public isGlobalAiPaused(): boolean {
+    return this.db.globalAiPaused !== false; // Default true (pausado) por segurança
+  }
+
+  public setGlobalAiPaused(paused: boolean): void {
+    this.db.globalAiPaused = paused;
+    this.saveData(this.db);
+    console.log(`[Storage] 🛑 Pausa Global da IA atualizada para: ${paused ? 'PAUSADA ⏸️' : 'ATIVA ▶️'}`);
   }
 }
 

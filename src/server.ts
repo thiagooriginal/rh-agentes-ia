@@ -67,8 +67,26 @@ export function createServer() {
       establishment: est,
       whatsapp: whatsappService.getStatus(),
       hasGeminiApiKey: aiService.hasApiKey(),
-      hasGoogleCalendar: googleCalendar.isAvailable()
+      hasGoogleCalendar: googleCalendar.isAvailable(),
+      isAiPaused: storage.isGlobalAiPaused()
     });
+  });
+
+  // --- CONTROLE DE PAUSA GLOBAL DA IA ---
+  app.get('/api/ai/status', (req, res) => {
+    res.json({
+      paused: storage.isGlobalAiPaused()
+    });
+  });
+
+  app.post('/api/ai/pause', (req, res) => {
+    storage.setGlobalAiPaused(true);
+    res.json({ success: true, paused: true, message: 'Respostas automáticas da IA pausadas com sucesso.' });
+  });
+
+  app.post('/api/ai/resume', (req, res) => {
+    storage.setGlobalAiPaused(false);
+    res.json({ success: true, paused: false, message: 'Respostas automáticas da IA reativadas com sucesso.' });
   });
 
   app.post('/api/whatsapp/connect', async (req, res) => {

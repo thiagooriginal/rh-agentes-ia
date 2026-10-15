@@ -282,15 +282,71 @@ export class WhatsAppService {
             continue;
           }
 
-          // Se a mensagem for idêntica à última resposta emitida pela IA, evita loop
-          if (this.recentBotReplies.has(messageText.trim())) {
+          const trimmedMessage = messageText.trim();
+
+          // 1. COMANDOS DE ADMINISTRAÇÃO DIRETA PELO WHATSAPP (Sempre processados mesmo pausado)
+          if (isSelf || isAllowedExternal) {
+            const cmd = trimmedMessage.toLowerCase();
+            if (cmd === '!pausar' || cmd === '!parar' || cmd === '!pause') {
+              storage.setGlobalAiPaused(true);
+              const targetJid = remoteJid.endsWith('@lid') ? `${effectivePhone}@s.whatsapp.net` : remoteJid;
+              await this.sock?.sendMessage(targetJid, {
+                text: '⏸️ *Respostas automáticas da IA foram PAUSADAS com sucesso!*\n\nO bot não responderá mais a nenhuma mensagem nem atenderá clientes ou testes até que você envie `!retomar`.'
+              });
+              continue;
+            }
+            if (cmd === '!retomar' || cmd === '!play' || cmd === '!iniciar' || cmd === '!despausar') {
+              storage.setGlobalAiPaused(false);
+              const targetJid = remoteJid.endsWith('@lid') ? `${effectivePhone}@s.whatsapp.net` : remoteJid;
+              await this.sock?.sendMessage(targetJid, {
+                text: '▶️ *Respostas automáticas da IA REATIVADAS com sucesso!*\n\nO bot voltará a responder clientes e demonstrações normalmente.'
+              });
+              continue;
+            }
+            if (cmd === '!status') {
+              const isPaused = storage.isGlobalAiPaused();
+              const targetJid = remoteJid.endsWith('@lid') ? `${effectivePhone}@s.whatsapp.net` : remoteJid;
+              await this.sock?.sendMessage(targetJid, {
+                text: `🤖 *RH de Agentes IA - Status Atual:*\n• Respostas Automáticas: ${isPaused ? '⏸️ PAUSADAS' : '▶️ ATIVAS'}\n• Linha: ${effectivePhone}\n\nEnvie \`!pausar\` ou \`!retomar\` para alternar.`
+              });
+              continue;
+            }
+          }
+
+          // 2. VERIFICAÇÃO DE PAUSA GLOBAL
+          if (storage.isGlobalAiPaused()) {
+            console.log(`[WhatsApp ⏸️ IA Pausada] Mensagem de ${cleanClientPhone} (${effectivePhone}) ignorada: Respostas automáticas estão pausadas globalmente.`);
             continue;
           }
 
-          // Verifica se está sob intervenção humana
+          // 3. PROTEÇÃO ANTI-LOOP: Detecta se a mensagem recebida é de outro robô/assistente
+          if (demoService.isPotentialBot(trimmedMessage)) {
+            console.log(`[WhatsApp 🤖 Anti-Loop] Detectada mensagem de outro assistente/bot vinda de ${cleanClientPhone}. Abortando envio para evitar loop.`);
+            if (activeDemoLead) {
+              demoService.completeDemoLead(activeDemoLead.id);
+            }
+            continue;
+          }
+
+          // 4. Se a mensagem for idêntica à última resposta emitida pela IA, evita loop
+          if (this.recentBotReplies.has(trimmedMessage)) {
+            continue;
+          }
+
+          // 5. Verifica se está sob intervenção humana
           if (storage.isHumanInterventionActive(effectivePhone)) {
             console.log(`[WhatsApp] Conversa com ${effectivePhone} sob intervenção humana.`);
-            storage.saveConversationMessage(effectivePhone, 'user', messageText);
+            storage.saveConversationMessage(effectivePhone, 'user', trimmedMessage);
+            continue;
+          }
+
+          // 6. LIMITE DE MENSAGENS PARA DEMOS DA VITRINE (Máximo 8 mensagens por lead)
+          if (activeDemoLead && demoService.isLeadLimitReached(activeDemoLead)) {
+            console.log(`[WhatsApp Vitrine Demo] Limite de mensagens atingido para lead ${activeDemoLead.name} (${activeDemoLead.phone}).`);
+            const completionMsg = `🌟 *Demonstração ao vivo concluída com sucesso!*\n\nVocê pôde comprovar na prática a velocidade, precisão e o atendimento humanizado do nosso colaborador digital do *RH de Agentes IA*!\n\n🚀 Para contratar e ativar este agente com um número exclusivo no seu negócio, acesse nosso site ou fale com nosso time!`;
+            demoService.completeDemoLead(activeDemoLead.id);
+            const targetJid = remoteJid.endsWith('@lid') ? `${effectivePhone}@s.whatsapp.net` : remoteJid;
+            await this.sock?.sendMessage(targetJid, { text: completionMsg });
             continue;
           }
 
@@ -302,17 +358,17 @@ export class WhatsAppService {
 
             let replyText = '';
             if (activeDemoLead) {
-              console.log(`[WhatsApp Vitrine Demo 🌟] Respondendo lead "${activeDemoLead.name}" (${activeDemoLead.niche}): "${messageText}"`);
+              console.log(`[WhatsApp Vitrine Demo 🌟] Respondendo lead "${activeDemoLead.name}" (${activeDemoLead.niche}): "${trimmedMessage}"`);
               demoService.recordInteraction(cleanClientPhone);
               replyText = await aiService.processDemoMessage(
                 effectivePhone,
-                messageText,
+                trimmedMessage,
                 activeDemoLead.name,
                 activeDemoLead.niche
               );
             } else {
-              console.log(`[WhatsApp 👤 Seu Número] Processando mensagem com IA do Salão: "${messageText}"`);
-              replyText = await aiService.processMessage(effectivePhone, messageText, effectiveName);
+              console.log(`[WhatsApp 👤 Seu Número] Processando mensagem com IA do Salão: "${trimmedMessage}"`);
+              replyText = await aiService.processMessage(effectivePhone, trimmedMessage, effectiveName);
             }
 
             // Armazena no cache recente para não gerar auto-eco

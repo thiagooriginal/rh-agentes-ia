@@ -278,6 +278,7 @@ export interface DatabaseSchema {
   humanInterventionFlags: Record<string, boolean>; // telefone -> true se humano assumiu
   campaigns?: PromotionCampaign[];
   demoLeads?: DemoLead[];
+  globalAiPaused?: boolean;
 }
 
 export type DemoNiche =
@@ -293,7 +294,7 @@ export interface DemoLead {
   name: string;
   phone: string;
   niche: DemoNiche;
-  status: 'ACTIVE' | 'EXPIRED';
+  status: 'ACTIVE' | 'EXPIRED' | 'COMPLETED' | 'PAUSED';
   createdAt: string;
   expiresAt: string;
   messageCount: number;

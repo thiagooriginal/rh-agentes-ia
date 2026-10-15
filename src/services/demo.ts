@@ -427,19 +427,45 @@ export class DemoService {
       if (lead) return lead;
     }
 
-    // 3. Se for um identificador longo (LID do WhatsApp com mais de 12 dígitos) e houver lead ativo recente:
-    const activeLeads = storage.getDemoLeads().filter(l => l.status === 'ACTIVE');
-    if (activeLeads.length > 0) {
-      // Pega o lead mais recente
-      const recent = activeLeads[activeLeads.length - 1];
-      if (recent) {
-        this.lidToPhoneMap.set(clean, recent.phone);
-        console.log(`[DemoService] 🎯 Associando LID ${clean} ao lead ativo recente: ${recent.name} (${recent.phone})`);
-        return recent;
-      }
-    }
-
+    // NUNCA fazer fallback cego para o último lead ativo, pois isso causava interceptação de chats alheios e loops de robôs
     return undefined;
+  }
+
+  // Verifica se o lead atingiu o limite de mensagens da demonstração gratuita (máximo 8 mensagens)
+  public isLeadLimitReached(lead: DemoLead): boolean {
+    return (lead.messageCount || 0) >= 8;
+  }
+
+  // Conclui a sessão de demonstração para não responder mais
+  public completeDemoLead(leadId: string): void {
+    storage.updateDemoLead(leadId, { status: 'COMPLETED' });
+  }
+
+  // Detecta se a mensagem recebida tem padrão de outro assistente ou bot para evitar loops infinitos
+  public isPotentialBot(text: string): boolean {
+    if (!text) return false;
+    const lower = text.toLowerCase();
+    const botKeywords = [
+      'colega robô',
+      'outro assistente',
+      'outros assistentes',
+      'sou o assistente',
+      'sou a assistente',
+      'sou um assistente',
+      'sou uma assistente',
+      'assistente virtual',
+      'assistente de ia',
+      'assistente pessoal',
+      'sou um modelo de',
+      'como assistente de inteligência',
+      'posso registrar seus gastos',
+      'rotina do thiago',
+      'avisa o thiago',
+      'avisaremos o thiago',
+      'trabalho em equipe com você',
+      'trocar figurinhas com outros assistentes'
+    ];
+    return botKeywords.some(keyword => lower.includes(keyword));
   }
 
   public recordInteraction(phoneOrLid: string) {
