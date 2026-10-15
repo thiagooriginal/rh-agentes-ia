@@ -277,6 +277,44 @@ export interface DatabaseSchema {
   conversations: Record<string, ChatMessage[]>;
   humanInterventionFlags: Record<string, boolean>; // telefone -> true se humano assumiu
   campaigns?: PromotionCampaign[];
+  demoLeads?: DemoLead[];
+}
+
+export type DemoNiche =
+  | 'petshop'
+  | 'estetica'
+  | 'dentista'
+  | 'medico'
+  | 'cabeleireiro'
+  | 'pessoal';
+
+export interface DemoLead {
+  id: string;
+  name: string;
+  phone: string;
+  niche: DemoNiche;
+  status: 'ACTIVE' | 'EXPIRED';
+  createdAt: string;
+  expiresAt: string;
+  messageCount: number;
+  lastInteractionAt: string;
+}
+
+export interface PersonaConfig {
+  id: DemoNiche;
+  title: string;
+  agentName: string;
+  businessName: string;
+  category: string;
+  icon: string;
+  color: string;
+  badge: string;
+  tagline: string;
+  description: string;
+  features: string[];
+  sampleQuestions: string[];
+  openerMessage: (leadName: string) => string;
+  systemInstruction: (leadName: string) => string;
 }
 
 export interface WhatsAppState {
@@ -285,3 +323,4 @@ export interface WhatsAppState {
   phoneNumber?: string;
   lastUpdated: string;
 }
+

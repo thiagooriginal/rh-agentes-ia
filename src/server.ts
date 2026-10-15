@@ -9,6 +9,7 @@ import { aiService } from './services/ai.js';
 import { whatsappService } from './services/whatsapp.js';
 import { googleCalendar } from './services/calendar.js';
 import { campaignService } from './services/campaign.js';
+import { demoService } from './services/demo.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'salao-beauty-secret-token-2026';
 
@@ -330,6 +331,71 @@ export function createServer() {
   app.get('/api/campaigns/:id/status', (req, res) => {
     const status = campaignService.getCampaignStatus(req.params.id);
     res.json(status || { error: 'Campanha não encontrada' });
+  });
+
+  // --- VITRINE DE SOLUÇÕES & DEMO INTERATIVA AO VIVO ---
+  app.get('/api/demo/niches', (req, res) => {
+    res.json({
+      niches: demoService.getNiches(),
+      whatsappStatus: whatsappService.getStatus().state
+    });
+  });
+
+  app.post('/api/demo/start', async (req, res) => {
+    const { name, phone, niche } = req.body;
+    if (!phone || !niche) {
+      return res.status(400).json({ success: false, error: 'Telefone e nicho de solução são obrigatórios.' });
+    }
+
+    try {
+      const result = await demoService.startDemoSession(name, phone, niche);
+      
+      // Envia a mensagem de abertura automaticamente no WhatsApp do lead
+      let whatsappSent = false;
+      let deliveryNote = '';
+
+      if (whatsappService.isConnected()) {
+        whatsappSent = await whatsappService.sendMessageToClient(result.lead.phone, result.openerMessage);
+        if (whatsappSent) {
+          deliveryNote = 'Mensagem de boas-vindas enviada para o seu WhatsApp! Responda por lá com texto ou áudio.';
+        } else {
+          deliveryNote = 'Não foi possível disparar a mensagem via WhatsApp neste instante. Tente novamente.';
+        }
+      } else {
+        deliveryNote = 'Sua demonstração foi registrada com sucesso! (Aviso: O WhatsApp do sistema está aguardando leitura do QR Code para disparo instantâneo).';
+      }
+
+      res.json({
+        success: true,
+        whatsappSent,
+        deliveryNote,
+        lead: result.lead,
+        persona: result.persona,
+        openerMessage: result.openerMessage
+      });
+    } catch (err: any) {
+      console.error('[API Demo] Erro ao iniciar demo:', err);
+      res.status(400).json({ success: false, error: err.message || 'Erro ao registrar teste da demonstração.' });
+    }
+  });
+
+  app.get('/api/demo/leads', (req, res) => {
+    res.json({ leads: demoService.getAllLeads() });
+  });
+
+  app.post('/api/demo/simulate-chat', async (req, res) => {
+    const { phone, message, niche, name } = req.body;
+    if (!message || !niche) {
+      return res.status(400).json({ error: 'Mensagem e nicho são obrigatórios' });
+    }
+
+    try {
+      const cleanPhone = demoService.normalizePhone(phone || '5511999999999');
+      const reply = await aiService.processDemoMessage(cleanPhone, message, name || 'Visitante', niche);
+      res.json({ success: true, reply });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   return app;

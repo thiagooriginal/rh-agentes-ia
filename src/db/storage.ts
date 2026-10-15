@@ -16,7 +16,8 @@ import {
   WorkingDaySchedule,
   ChatMessage,
   FinancialSnapshot,
-  PromotionCampaign
+  PromotionCampaign,
+  DemoLead
 } from '../types.js';
 
 const PILOT_ESTABLISHMENT_ID = 'est_pilot_01';
@@ -376,7 +377,8 @@ class StorageManager {
             auditLogs: parsed.auditLogs || [],
             conversations: parsed.conversations || {},
             humanInterventionFlags: parsed.humanInterventionFlags || {},
-            campaigns: parsed.campaigns || []
+            campaigns: parsed.campaigns || [],
+            demoLeads: parsed.demoLeads || []
           };
         }
       }
@@ -398,7 +400,8 @@ class StorageManager {
       auditLogs: [],
       conversations: {},
       humanInterventionFlags: {},
-      campaigns: []
+      campaigns: [],
+      demoLeads: []
     };
 
     // Cria alguns agendamentos demonstrativos
@@ -1280,6 +1283,58 @@ class StorageManager {
     this.saveData(this.db);
     return this.db.campaigns[idx];
   }
+
+  // --- DEMO LEADS & VITRINE MULTI-PERSONAS ---
+  public getDemoLeads(): DemoLead[] {
+    return this.db.demoLeads || [];
+  }
+
+  public getDemoLeadById(id: string): DemoLead | undefined {
+    return (this.db.demoLeads || []).find(l => l.id === id);
+  }
+
+  public saveDemoLead(lead: DemoLead): DemoLead {
+    if (!this.db.demoLeads) this.db.demoLeads = [];
+    const cleanPhone = lead.phone.replace(/\D/g, '');
+    
+    // Remove sessões ativas anteriores para o mesmo telefone para que o novo nicho assuma
+    this.db.demoLeads = this.db.demoLeads.filter(l => {
+      const p = l.phone.replace(/\D/g, '');
+      const isSame = p === cleanPhone || (p.slice(-8) === cleanPhone.slice(-8) && p.length >= 8);
+      return !isSame;
+    });
+
+    this.db.demoLeads.push(lead);
+    this.saveData(this.db);
+    return lead;
+  }
+
+  public updateDemoLead(id: string, updates: Partial<DemoLead>): DemoLead | null {
+    if (!this.db.demoLeads) this.db.demoLeads = [];
+    const idx = this.db.demoLeads.findIndex(l => l.id === id);
+    if (idx === -1) return null;
+    this.db.demoLeads[idx] = { ...this.db.demoLeads[idx], ...updates };
+    this.saveData(this.db);
+    return this.db.demoLeads[idx];
+  }
+
+  public getActiveDemoLeadByPhone(phone: string): DemoLead | undefined {
+    if (!this.db.demoLeads || this.db.demoLeads.length === 0) return undefined;
+    const clean = phone.replace(/\D/g, '');
+    const now = new Date().toISOString();
+
+    return this.db.demoLeads.find(l => {
+      if (l.status !== 'ACTIVE') return false;
+      if (l.expiresAt && l.expiresAt < now) return false;
+
+      const p = l.phone.replace(/\D/g, '');
+      if (p === clean) return true;
+      const s1 = p.slice(-8);
+      const s2 = clean.slice(-8);
+      return s1.length >= 8 && s1 === s2;
+    });
+  }
 }
 
 export const storage = new StorageManager();
+

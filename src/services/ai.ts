@@ -3,6 +3,8 @@ import { storage } from '../db/storage.js';
 import { config } from '../config.js';
 import { googleCalendar } from './calendar.js';
 import { campaignService } from './campaign.js';
+import { demoService } from './demo.js';
+import { DemoNiche } from '../types.js';
 
 export class AIService {
   private genAI: GoogleGenAI | null = null;
@@ -597,6 +599,53 @@ DIRETRIZES GERAIS:
     } catch (error: any) {
       console.error('[AI] Erro no fluxo do Gemini:', error);
       const fallback = 'Oi! Tive uma pequena oscilação para consultar a agenda neste exato instante. Poderia me confirmar para qual dia e serviço você deseja o atendimento? 😊';
+      storage.saveConversationMessage(clientPhone, 'assistant', fallback);
+      return fallback;
+    }
+  }
+
+  // Processamento de mensagem para os agentes da vitrine de soluções (multi-personas)
+  public async processDemoMessage(
+    clientPhone: string,
+    userMessage: string,
+    clientName: string,
+    niche: DemoNiche
+  ): Promise<string> {
+    if (!this.genAI) this.initClient();
+    if (!this.genAI) {
+      return 'Olá! Nosso serviço de Inteligência Artificial está sendo inicializado. Por favor, tente novamente em alguns instantes.';
+    }
+
+    storage.saveConversationMessage(clientPhone, 'user', userMessage);
+
+    try {
+      const persona = demoService.getPersona(niche);
+      const systemInstruction = persona.systemInstruction(clientName);
+
+      const history = storage.getConversationHistory(clientPhone);
+      // Pega histórico anterior (exceto a mensagem atual que acabamos de salvar)
+      const previousTurns = history.slice(0, -1).slice(-10).map(msg => ({
+        role: msg.sender === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.content }]
+      }));
+
+      const chat = this.genAI.chats.create({
+        model: 'gemini-3.5-flash-lite',
+        history: previousTurns,
+        config: {
+          systemInstruction
+        }
+      });
+
+      const response = await chat.sendMessage({ message: userMessage });
+      const replyText = response.text || 'Entendido com sucesso! Como posso te ajudar mais? 😊';
+
+      storage.saveConversationMessage(clientPhone, 'assistant', replyText);
+      return replyText;
+    } catch (err: any) {
+      console.error(`[AI Demo ${niche}] Erro ao processar mensagem do Gemini:`, err);
+      const persona = demoService.getPersona(niche);
+      const fallback = `Oi! Tive uma leve oscilação de sinal aqui no sistema da ${persona.businessName}. Poderia me repetir o que você precisa? Estou à disposição! 😊`;
       storage.saveConversationMessage(clientPhone, 'assistant', fallback);
       return fallback;
     }

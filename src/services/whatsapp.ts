@@ -11,6 +11,7 @@ import qrcodeTerminal from 'qrcode-terminal';
 import { config } from '../config.js';
 import { aiService } from './ai.js';
 import { storage } from '../db/storage.js';
+import { demoService } from './demo.js';
 import { WhatsAppState } from '../types.js';
 
 export class WhatsAppService {
@@ -160,9 +161,10 @@ export class WhatsAppService {
           // Verifica se é o próprio usuário (via número normal ou via LID no chat com você mesmo)
           const isSelf = isMatchingPhone(cleanClientPhone, botPhone) || (botLid && cleanClientPhone === botLid);
           const isAllowedExternal = [adminPhone, ...config.allowedPhoneNumbers].filter(Boolean).some(num => isMatchingPhone(cleanClientPhone, num));
+          const activeDemoLead = demoService.getActiveLead(cleanClientPhone);
 
-          if (!isSelf && !isAllowedExternal) {
-            console.log(`[WhatsApp Segurança] 🚫 Mensagem de ${cleanClientPhone} ignorada: apenas seu próprio número tem permissão.`);
+          if (!isSelf && !isAllowedExternal && !activeDemoLead) {
+            console.log(`[WhatsApp Segurança] 🚫 Mensagem de ${cleanClientPhone} ignorada: apenas seu próprio número ou leads da vitrine têm permissão.`);
             continue;
           }
 
@@ -171,7 +173,8 @@ export class WhatsAppService {
             continue;
           }
 
-          const effectivePhone = isSelf ? (botPhone || '5511951364159') : cleanClientPhone;
+          const effectivePhone = isSelf ? (botPhone || '5511951364159') : (activeDemoLead ? activeDemoLead.phone : cleanClientPhone);
+          const effectiveName = activeDemoLead ? activeDemoLead.name : clientName;
 
           // Extrai áudio se presente (mensagem de voz gravada ou arquivo de áudio)
           const audioMsg =
@@ -247,8 +250,6 @@ export class WhatsAppService {
             continue;
           }
 
-          console.log(`[WhatsApp 👤 Seu Número] Processando mensagem com IA: "${messageText}"`);
-
           // Verifica se está sob intervenção humana
           if (storage.isHumanInterventionActive(effectivePhone)) {
             console.log(`[WhatsApp] Conversa com ${effectivePhone} sob intervenção humana.`);
@@ -262,7 +263,20 @@ export class WhatsAppService {
               await this.sock.sendPresenceUpdate('composing', remoteJid);
             }
 
-            const replyText = await aiService.processMessage(effectivePhone, messageText, clientName);
+            let replyText = '';
+            if (activeDemoLead) {
+              console.log(`[WhatsApp Vitrine Demo 🌟] Respondendo lead "${activeDemoLead.name}" (${activeDemoLead.niche}): "${messageText}"`);
+              demoService.recordInteraction(cleanClientPhone);
+              replyText = await aiService.processDemoMessage(
+                effectivePhone,
+                messageText,
+                activeDemoLead.name,
+                activeDemoLead.niche
+              );
+            } else {
+              console.log(`[WhatsApp 👤 Seu Número] Processando mensagem com IA do Salão: "${messageText}"`);
+              replyText = await aiService.processMessage(effectivePhone, messageText, effectiveName);
+            }
 
             // Armazena no cache recente para não gerar auto-eco
             this.recentBotReplies.add(replyText.trim());
