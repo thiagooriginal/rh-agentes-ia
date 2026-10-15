@@ -13,6 +13,7 @@ import { aiService } from './ai.js';
 import { storage } from '../db/storage.js';
 import { demoService, NICHE_PERSONAS } from './demo.js';
 import { DemoNiche, WhatsAppState } from '../types.js';
+import { geocodingService } from './geocoding.js';
 
 // Desembrulha mensagens de estruturas como deviceSentMessage, ephemeralMessage, viewOnceMessage, editedMessage
 function unwrapMessage(m: any): any {
@@ -100,7 +101,7 @@ export class PortalWhatsAppService {
           console.log(`\n=================================================`);
           console.log(`✅ WhatsApp do PORTAL DAS IAs conectado com sucesso!`);
           console.log(`📞 Linha Dedicada da Vitrine: ${userPhone}`);
-          console.log(`🤖 Atendendo Personas: Petshop, Estética, Dentista, Médico, Barbearia, Jarvis`);
+          console.log(`🤖 Atendendo Personas: Petshop, Estética, Dentista, Médico, Barbearia, Jarvis, Pizzaria`);
           console.log(`=================================================\n`);
 
           this.state = {
@@ -230,6 +231,37 @@ export class PortalWhatsAppService {
               }
             } catch (audioErr) {
               console.error(`[Portal WhatsApp 🎙️ Erro] Falha no áudio:`, audioErr);
+            }
+          }
+
+          // Extrai localização GPS se presente (WhatsApp pin de localização compartilhado)
+          const locMsg = realMsg?.locationMessage || realMsg?.liveLocationMessage;
+          if (
+            locMsg &&
+            typeof locMsg.degreesLatitude === 'number' &&
+            typeof locMsg.degreesLongitude === 'number'
+          ) {
+            const lat = locMsg.degreesLatitude;
+            const lng = locMsg.degreesLongitude;
+            const locName = (locMsg as any).name || '';
+            const locAddress = (locMsg as any).address || '';
+            console.log(
+              `[Portal WhatsApp 📍 Localização] Recebida de ${resolvedPhone}: Lat ${lat}, Lng ${lng} (${locName} ${locAddress})`
+            );
+
+            try {
+              const geocoded = await geocodingService.resolveCoordinates(
+                lat,
+                lng,
+                locName,
+                locAddress
+              );
+              const locBlock = geocodingService.formatLocationPromptBlock(geocoded);
+              messageText = messageText ? `${messageText}\n\n${locBlock}` : locBlock;
+            } catch (geoErr) {
+              console.error('[Portal WhatsApp 📍 Erro Geocoding]:', geoErr);
+              const fallbackLoc = `📍 [LOCALIZAÇÃO COMPARTILHADA VIA GPS]: Lat ${lat}, Lng ${lng}. (Link: https://www.google.com/maps?q=${lat},${lng})`;
+              messageText = messageText ? `${messageText}\n\n${fallbackLoc}` : fallbackLoc;
             }
           }
 

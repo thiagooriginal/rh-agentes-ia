@@ -289,7 +289,8 @@ export type DemoNiche =
   | 'dentista'
   | 'medico'
   | 'cabeleireiro'
-  | 'pessoal';
+  | 'pessoal'
+  | 'pizzaria';
 
 export interface DemoLead {
   id: string;

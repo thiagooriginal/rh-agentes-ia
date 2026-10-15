@@ -5,6 +5,7 @@ import { googleCalendar } from './calendar.js';
 import { campaignService } from './campaign.js';
 import { demoService } from './demo.js';
 import { DemoNiche } from '../types.js';
+import { geocodingService } from './geocoding.js';
 
 export class AIService {
   private genAI: GoogleGenAI | null = null;
@@ -630,26 +631,88 @@ DIRETRIZES GERAIS:
         parts: [{ text: msg.content }]
       }));
 
-      let response;
+      const demoTools = niche === 'pizzaria' ? [{
+        functionDeclarations: [
+          {
+            name: 'calcular_taxa_entrega_geolocalizacao',
+            description: 'Calcula a distância exata da pizzaria, o valor da taxa de entrega e o tempo estimado a partir de um endereço ou CEP informado pelo cliente.',
+            parameters: {
+              type: Type.OBJECT,
+              properties: {
+                endereco_ou_cep: {
+                  type: Type.STRING,
+                  description: 'Endereço (rua, número e bairro) ou CEP de 8 dígitos do cliente.'
+                }
+              },
+              required: ['endereco_ou_cep']
+            }
+          }
+        ]
+      }] : undefined;
+
+      let response: any;
+      let activeChat: any;
       try {
-        const chat = this.genAI.chats.create({
+        activeChat = this.genAI.chats.create({
           model: 'gemini-3.5-flash-lite',
           history: previousTurns,
           config: {
-            systemInstruction
+            systemInstruction,
+            tools: demoTools
           }
         });
-        response = await chat.sendMessage({ message: userMessage });
+        response = await activeChat.sendMessage({ message: userMessage });
       } catch (errLite: any) {
         console.warn(`[AI Demo ${niche}] Falha com gemini-3.5-flash-lite (${errLite?.message}), acionando fallback gemini-3.8-flash...`);
-        const fallbackChat = this.genAI.chats.create({
+        activeChat = this.genAI.chats.create({
           model: 'gemini-3.8-flash',
           history: previousTurns,
           config: {
-            systemInstruction
+            systemInstruction,
+            tools: demoTools
           }
         });
-        response = await fallbackChat.sendMessage({ message: userMessage });
+        response = await activeChat.sendMessage({ message: userMessage });
+      }
+
+      // Processa chamadas de funções para o nicho de Pizzaria (se houver)
+      let iterations = 0;
+      while (response && response.functionCalls && response.functionCalls.length > 0 && iterations < 3) {
+        iterations++;
+        const call: any = response.functionCalls[0];
+        let funcResult: any = { sucesso: true };
+
+        if (call.name === 'calcular_taxa_entrega_geolocalizacao') {
+          const rawQuery = (call.args as any)?.endereco_ou_cep || '';
+          const geo = await geocodingService.searchAddressOrCep(rawQuery);
+          if (geo) {
+            funcResult = {
+              sucesso: true,
+              endereco_detectado: geo.address,
+              bairro: geo.neighborhood || undefined,
+              cidade: geo.city || undefined,
+              distancia_km: geo.distanceKm,
+              taxa_entrega: geo.deliveryFeeFormatted,
+              tempo_estimado: geo.estimatedTime,
+              dentro_do_raio: geo.withinRange,
+              observacao: geo.notes
+            };
+          } else {
+            funcResult = {
+              sucesso: false,
+              mensagem: 'Não conseguimos localizar as coordenadas exatas desse endereço no mapa. Use a taxa padrão de R$ 7,00 ou peça um ponto de referência próximo.'
+            };
+          }
+        }
+
+        response = await activeChat.sendMessage({
+          message: [{
+            functionResponse: {
+              name: call.name || '',
+              response: funcResult
+            }
+          }]
+        });
       }
 
       const replyText = response.text || 'Entendido com sucesso! Como posso te ajudar mais? 😊';

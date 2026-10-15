@@ -12,6 +12,7 @@ import { config } from '../config.js';
 import { aiService } from './ai.js';
 import { storage } from '../db/storage.js';
 import { WhatsAppState } from '../types.js';
+import { geocodingService } from './geocoding.js';
 
 // Desembrulha mensagens de estruturas como deviceSentMessage, ephemeralMessage, viewOnceMessage, editedMessage
 function unwrapMessage(m: any): any {
@@ -254,6 +255,37 @@ export class WhatsAppService {
               }
             } catch (audioErr) {
               console.error(`[WhatsApp 🎙️ Erro] Falha ao processar áudio:`, audioErr);
+            }
+          }
+
+          // Extrai localização GPS se presente (WhatsApp pin de localização compartilhado)
+          const locMsg = realMsg?.locationMessage || realMsg?.liveLocationMessage;
+          if (
+            locMsg &&
+            typeof locMsg.degreesLatitude === 'number' &&
+            typeof locMsg.degreesLongitude === 'number'
+          ) {
+            const lat = locMsg.degreesLatitude;
+            const lng = locMsg.degreesLongitude;
+            const locName = (locMsg as any).name || '';
+            const locAddress = (locMsg as any).address || '';
+            console.log(
+              `[WhatsApp Salão 📍 Localização] Recebida de ${effectivePhone}: Lat ${lat}, Lng ${lng} (${locName} ${locAddress})`
+            );
+
+            try {
+              const geocoded = await geocodingService.resolveCoordinates(
+                lat,
+                lng,
+                locName,
+                locAddress
+              );
+              const locBlock = geocodingService.formatLocationPromptBlock(geocoded);
+              messageText = messageText ? `${messageText}\n\n${locBlock}` : locBlock;
+            } catch (geoErr) {
+              console.error('[WhatsApp Salão 📍 Erro Geocoding]:', geoErr);
+              const fallbackLoc = `📍 [LOCALIZAÇÃO COMPARTILHADA VIA GPS]: Lat ${lat}, Lng ${lng}. (Link: https://www.google.com/maps?q=${lat},${lng})`;
+              messageText = messageText ? `${messageText}\n\n${fallbackLoc}` : fallbackLoc;
             }
           }
 
