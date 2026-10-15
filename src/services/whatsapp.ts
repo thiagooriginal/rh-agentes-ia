@@ -14,6 +14,18 @@ import { storage } from '../db/storage.js';
 import { demoService } from './demo.js';
 import { WhatsAppState } from '../types.js';
 
+// Desembrulha mensagens de estruturas como deviceSentMessage, ephemeralMessage, viewOnceMessage, editedMessage
+function unwrapMessage(m: any): any {
+  if (!m) return m;
+  if (m.deviceSentMessage?.message) return unwrapMessage(m.deviceSentMessage.message);
+  if (m.ephemeralMessage?.message) return unwrapMessage(m.ephemeralMessage.message);
+  if (m.viewOnceMessage?.message) return unwrapMessage(m.viewOnceMessage.message);
+  if (m.viewOnceMessageV2?.message) return unwrapMessage(m.viewOnceMessageV2.message);
+  if (m.documentWithCaptionMessage?.message) return unwrapMessage(m.documentWithCaptionMessage.message);
+  if (m.editedMessage?.message) return unwrapMessage(m.editedMessage.message);
+  return m;
+}
+
 export class WhatsAppService {
   private sock: WASocket | null = null;
   private state: WhatsAppState = {
@@ -139,10 +151,25 @@ export class WhatsAppService {
             continue;
           }
 
+          const rawKeys = msg.message ? Object.keys(msg.message).join(', ') : 'none';
+          const realMsg = unwrapMessage(msg.message);
+
           // Extração correta do ID/telefone sem o sufixo de dispositivo (:49, :50) nem domínio (@lid, @s.whatsapp.net)
           const userPart = remoteJid.split('@')[0].split(':')[0];
           const cleanClientPhone = userPart.replace(/\D/g, '');
           const clientName = msg.pushName || 'Você';
+
+          // Tenta resolver o telefone real caso seja um JID do tipo @lid
+          let resolvedPhone = cleanClientPhone;
+          if (remoteJid.endsWith('@lid')) {
+            try {
+              const pnJid = await (this.sock as any)?.signalRepository?.lidMapping?.getPNForLID(remoteJid);
+              if (pnJid) {
+                resolvedPhone = pnJid.split('@')[0].split(':')[0].replace(/\D/g, '');
+                console.log(`[WhatsApp LID Resolvido] Mapeado LID ${cleanClientPhone} -> Telefone ${resolvedPhone}`);
+              }
+            } catch (e) {}
+          }
 
           // 2. REGRA ESTRITA: Filtrar apenas o seu próprio número (incluindo LID do WhatsApp)
           const botPhone = (this.sock?.user?.id?.split('@')[0]?.split(':')[0] || '').replace(/\D/g, '');
@@ -159,12 +186,19 @@ export class WhatsAppService {
           };
 
           // Verifica se é o próprio usuário (via número normal ou via LID no chat com você mesmo)
-          const isSelf = isMatchingPhone(cleanClientPhone, botPhone) || (botLid && cleanClientPhone === botLid);
-          const isAllowedExternal = [adminPhone, ...config.allowedPhoneNumbers].filter(Boolean).some(num => isMatchingPhone(cleanClientPhone, num));
-          const activeDemoLead = demoService.getActiveLead(cleanClientPhone);
+          const isSelf = isMatchingPhone(cleanClientPhone, botPhone) || 
+                         isMatchingPhone(resolvedPhone, botPhone) || 
+                         (botLid && (cleanClientPhone === botLid || resolvedPhone === botLid));
+
+          const isAllowedExternal = [adminPhone, ...config.allowedPhoneNumbers].filter(Boolean).some(num => 
+            isMatchingPhone(cleanClientPhone, num) || isMatchingPhone(resolvedPhone, num)
+          );
+
+          // Verifica se há sessão ativa de demonstração pelo telefone ou pelo LID
+          const activeDemoLead = demoService.getActiveLead(resolvedPhone) || demoService.getActiveLead(cleanClientPhone);
 
           if (!isSelf && !isAllowedExternal && !activeDemoLead) {
-            console.log(`[WhatsApp Segurança] 🚫 Mensagem de ${cleanClientPhone} ignorada: apenas seu próprio número ou leads da vitrine têm permissão.`);
+            console.log(`[WhatsApp Segurança] 🚫 Mensagem de ${cleanClientPhone} (resolvido: ${resolvedPhone}) ignorada: apenas seu próprio número ou leads da vitrine têm permissão.`);
             continue;
           }
 
@@ -173,39 +207,33 @@ export class WhatsAppService {
             continue;
           }
 
-          const effectivePhone = isSelf ? (botPhone || '5511951364159') : (activeDemoLead ? activeDemoLead.phone : cleanClientPhone);
+          const effectivePhone = isSelf ? (botPhone || '5511951364159') : (activeDemoLead ? activeDemoLead.phone : resolvedPhone);
           const effectiveName = activeDemoLead ? activeDemoLead.name : clientName;
 
           // Extrai áudio se presente (mensagem de voz gravada ou arquivo de áudio)
-          const audioMsg =
-            msg.message?.audioMessage ||
-            msg.message?.ephemeralMessage?.message?.audioMessage ||
-            msg.message?.viewOnceMessage?.message?.audioMessage ||
-            msg.message?.viewOnceMessageV2?.message?.audioMessage;
+          const audioMsg = realMsg?.audioMessage;
 
           // Extração de conteúdo textual
           let messageText =
-            msg.message?.conversation ||
-            msg.message?.extendedTextMessage?.text ||
-            msg.message?.ephemeralMessage?.message?.conversation ||
-            msg.message?.ephemeralMessage?.message?.extendedTextMessage?.text ||
-            msg.message?.viewOnceMessage?.message?.conversation ||
-            msg.message?.viewOnceMessage?.message?.extendedTextMessage?.text ||
-            msg.message?.viewOnceMessageV2?.message?.conversation ||
-            msg.message?.viewOnceMessageV2?.message?.extendedTextMessage?.text ||
+            realMsg?.conversation ||
+            realMsg?.extendedTextMessage?.text ||
+            realMsg?.imageMessage?.caption ||
+            realMsg?.videoMessage?.caption ||
+            realMsg?.documentMessage?.caption ||
             '';
 
           // Se for mensagem de áudio, baixa a mídia e transcreve com inteligência artificial
           if (audioMsg) {
-            console.log(`[WhatsApp 🎙️ Áudio] Mensagem de voz recebida de ${cleanClientPhone}. Baixando mídia...`);
+            console.log(`[WhatsApp 🎙️ Áudio] Mensagem de voz recebida de ${cleanClientPhone} (${effectivePhone}). Baixando mídia...`);
             try {
               if (this.sock) {
                 await this.sock.presenceSubscribe(remoteJid);
                 await this.sock.sendPresenceUpdate('recording', remoteJid);
               }
 
+              const msgToDownload = { ...msg, message: realMsg };
               const audioBuffer = await downloadMediaMessage(
-                msg,
+                msgToDownload,
                 'buffer',
                 {},
                 {
@@ -233,7 +261,16 @@ export class WhatsAppService {
             }
           }
 
-          console.log('[WhatsApp Evento]', { remoteJid, cleanClientPhone, fromMe: msg.key.fromMe, type: m.type, isAudio: !!audioMsg, text: messageText });
+          console.log('[WhatsApp Evento]', { 
+            remoteJid, 
+            cleanClientPhone, 
+            resolvedPhone, 
+            fromMe: msg.key.fromMe, 
+            keys: rawKeys,
+            isAudio: !!audioMsg, 
+            text: messageText, 
+            isDemo: !!activeDemoLead 
+          });
 
           if (!messageText || messageText.trim().length === 0) {
             if (audioMsg) {
@@ -337,6 +374,25 @@ export class WhatsAppService {
         }
         this.recentBotReplies.add(text.trim());
         storage.saveConversationMessage(phone, 'assistant', text);
+
+        // Se o Baileys mapear o LID deste telefone, associa no demoService
+        try {
+          const lidJid = await (this.sock as any)?.signalRepository?.lidMapping?.getLIDForPN(remoteJid);
+          if (lidJid) {
+            const cleanLid = lidJid.split('@')[0].split(':')[0].replace(/\D/g, '');
+            demoService.mapLidToPhone(cleanLid, clean);
+          }
+        } catch (e) {}
+
+        // Se for o próprio número do bot (self-chat), também sincroniza no @lid para aparecer na tela
+        const botPhone = (this.sock?.user?.id?.split('@')[0]?.split(':')[0] || '').replace(/\D/g, '');
+        const botLid = (this.sock?.user?.lid?.split('@')[0]?.split(':')[0] || '').replace(/\D/g, '');
+        if (clean === botPhone && botLid) {
+          try {
+            await this.sock.sendMessage(`${botLid}@lid`, { text });
+          } catch (e) {}
+        }
+
         return true;
       } catch (err) {
         console.error(`[WhatsApp] Falha ao enviar mensagem para ${phone}:`, err);

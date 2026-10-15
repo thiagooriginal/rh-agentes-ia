@@ -399,13 +399,51 @@ export class DemoService {
     };
   }
 
-  // Verifica se o telefone possui uma sessão ativa
-  public getActiveLead(phone: string): DemoLead | undefined {
-    return storage.getActiveDemoLeadByPhone(phone);
+  private lidToPhoneMap: Map<string, string> = new Map();
+
+  // Mapeia um LID do WhatsApp para o telefone do lead
+  public mapLidToPhone(lid: string, phone: string) {
+    const cleanLid = lid.replace(/\D/g, '');
+    const cleanPhone = this.normalizePhone(phone);
+    if (cleanLid && cleanPhone) {
+      this.lidToPhoneMap.set(cleanLid, cleanPhone);
+      console.log(`[DemoService] Mapeado LID ${cleanLid} -> Telefone ${cleanPhone}`);
+    }
   }
 
-  public recordInteraction(phone: string) {
-    const lead = this.getActiveLead(phone);
+  // Verifica se o telefone ou LID possui uma sessão ativa
+  public getActiveLead(phoneOrLid: string): DemoLead | undefined {
+    const clean = phoneOrLid.replace(/\D/g, '');
+    if (!clean) return undefined;
+
+    // 1. Tenta buscar diretamente pelo número informado
+    let lead = storage.getActiveDemoLeadByPhone(clean);
+    if (lead) return lead;
+
+    // 2. Tenta buscar no mapa de LIDs conhecidos
+    const mappedPhone = this.lidToPhoneMap.get(clean);
+    if (mappedPhone) {
+      lead = storage.getActiveDemoLeadByPhone(mappedPhone);
+      if (lead) return lead;
+    }
+
+    // 3. Se for um identificador longo (LID do WhatsApp com mais de 12 dígitos) e houver lead ativo recente:
+    const activeLeads = storage.getDemoLeads().filter(l => l.status === 'ACTIVE');
+    if (activeLeads.length > 0) {
+      // Pega o lead mais recente
+      const recent = activeLeads[activeLeads.length - 1];
+      if (recent) {
+        this.lidToPhoneMap.set(clean, recent.phone);
+        console.log(`[DemoService] 🎯 Associando LID ${clean} ao lead ativo recente: ${recent.name} (${recent.phone})`);
+        return recent;
+      }
+    }
+
+    return undefined;
+  }
+
+  public recordInteraction(phoneOrLid: string) {
+    const lead = this.getActiveLead(phoneOrLid);
     if (lead) {
       storage.updateDemoLead(lead.id, {
         messageCount: (lead.messageCount || 0) + 1,
@@ -420,3 +458,4 @@ export class DemoService {
 }
 
 export const demoService = new DemoService();
+
