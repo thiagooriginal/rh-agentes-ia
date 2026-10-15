@@ -74,8 +74,9 @@ async function fetchStatus() {
       badgeGemini.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400"></span><span class="text-amber-300">Gemini: Sem Chave</span>';
     }
 
-    // Badge WhatsApp
+    // Badge WhatsApp Topo & Linha 1 (Salão)
     const badgeWA = document.getElementById('badgeWA');
+    const badgeSalonLineStatus = document.getElementById('badgeSalonLineStatus');
     const qrLoading = document.getElementById('qrLoading');
     const qrImg = document.getElementById('qrImg');
     const qrOk = document.getElementById('qrOk');
@@ -83,22 +84,72 @@ async function fetchStatus() {
 
     const wa = data.whatsapp || {};
     if (wa.state === 'connected') {
-      badgeWA.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400"></span><span class="text-emerald-300">WhatsApp: Conectado</span>';
+      badgeWA.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400"></span><span class="text-emerald-300">Salão: Conectado</span>';
+      if (badgeSalonLineStatus) {
+        badgeSalonLineStatus.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+        badgeSalonLineStatus.innerText = 'CONECTADO';
+      }
       qrLoading.classList.add('hidden');
       qrImg.classList.add('hidden');
       qrOk.classList.remove('hidden');
       qrConnectedPhone.innerText = `Número: +${wa.phoneNumber || 'Ativo'}`;
     } else if (wa.state === 'qr_ready' && wa.qrCodeDataUrl) {
-      badgeWA.innerHTML = '<span class="w-2 h-2 rounded-full bg-sky-400"></span><span class="text-sky-300">WhatsApp: Escanear QR</span>';
+      badgeWA.innerHTML = '<span class="w-2 h-2 rounded-full bg-sky-400"></span><span class="text-sky-300">Salão: Escanear QR</span>';
+      if (badgeSalonLineStatus) {
+        badgeSalonLineStatus.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30 animate-pulse';
+        badgeSalonLineStatus.innerText = 'ESCANEAR QR';
+      }
       qrLoading.classList.add('hidden');
       qrOk.classList.add('hidden');
       qrImg.src = wa.qrCodeDataUrl;
       qrImg.classList.remove('hidden');
     } else {
-      badgeWA.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-500"></span><span class="text-slate-400">WhatsApp: Desconectado</span>';
+      badgeWA.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-500"></span><span class="text-slate-400">Salão: Desconectado</span>';
+      if (badgeSalonLineStatus) {
+        badgeSalonLineStatus.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30';
+        badgeSalonLineStatus.innerText = 'DESCONECTADO';
+      }
       qrImg.classList.add('hidden');
       qrOk.classList.add('hidden');
       qrLoading.classList.remove('hidden');
+    }
+
+    // Linha 2 (Portal das IAs)
+    const pwa = data.portalWhatsapp || {};
+    const badgePortalLineStatus = document.getElementById('badgePortalLineStatus');
+    const portalQrLoading = document.getElementById('portalQrLoading');
+    const portalQrImg = document.getElementById('portalQrImg');
+    const portalQrOk = document.getElementById('portalQrOk');
+    const portalQrConnectedPhone = document.getElementById('portalQrConnectedPhone');
+
+    if (portalQrLoading && portalQrImg && portalQrOk) {
+      if (pwa.state === 'connected') {
+        if (badgePortalLineStatus) {
+          badgePortalLineStatus.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+          badgePortalLineStatus.innerText = 'CONECTADO';
+        }
+        portalQrLoading.classList.add('hidden');
+        portalQrImg.classList.add('hidden');
+        portalQrOk.classList.remove('hidden');
+        if (portalQrConnectedPhone) portalQrConnectedPhone.innerText = `Número: +${pwa.phoneNumber || 'Ativo'}`;
+      } else if (pwa.state === 'qr_ready' && pwa.qrCodeDataUrl) {
+        if (badgePortalLineStatus) {
+          badgePortalLineStatus.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 animate-pulse';
+          badgePortalLineStatus.innerText = 'ESCANEAR QR';
+        }
+        portalQrLoading.classList.add('hidden');
+        portalQrOk.classList.add('hidden');
+        portalQrImg.src = pwa.qrCodeDataUrl;
+        portalQrImg.classList.remove('hidden');
+      } else {
+        if (badgePortalLineStatus) {
+          badgePortalLineStatus.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30';
+          badgePortalLineStatus.innerText = 'DESCONECTADO';
+        }
+        portalQrImg.classList.add('hidden');
+        portalQrOk.classList.add('hidden');
+        portalQrLoading.classList.remove('hidden');
+      }
     }
   } catch (err) {
     console.error('Erro ao buscar status:', err);
@@ -108,21 +159,42 @@ async function fetchStatus() {
 async function reconnectWA() {
   try {
     await fetch('/api/whatsapp/connect', { method: 'POST' });
-    alert('Tentando reconectar WhatsApp...');
+    alert('Tentando reconectar WhatsApp do Salão...');
     fetchStatus();
   } catch (e) {
-    alert('Erro ao reconectar.');
+    alert('Erro ao reconectar Salão.');
   }
 }
 
 async function disconnectWA() {
-  if (!confirm('Deseja realmente desconectar a sessão do WhatsApp?')) return;
+  if (!confirm('Deseja realmente desconectar a sessão do Salão (Linha 1)?')) return;
   try {
     await fetch('/api/whatsapp/disconnect', { method: 'POST' });
-    alert('Sessão desconectada.');
+    alert('Sessão do Salão desconectada.');
     fetchStatus();
   } catch (e) {
-    alert('Erro ao desconectar.');
+    alert('Erro ao desconectar Salão.');
+  }
+}
+
+async function reconnectPortalWA() {
+  try {
+    await fetch('/api/portal/whatsapp/connect', { method: 'POST' });
+    alert('Tentando reconectar WhatsApp do Portal das IAs...');
+    fetchStatus();
+  } catch (e) {
+    alert('Erro ao reconectar Portal.');
+  }
+}
+
+async function disconnectPortalWA() {
+  if (!confirm('Deseja realmente desconectar a sessão do Portal das IAs (Linha 2)?')) return;
+  try {
+    await fetch('/api/portal/whatsapp/disconnect', { method: 'POST' });
+    alert('Sessão do Portal desconectada.');
+    fetchStatus();
+  } catch (e) {
+    alert('Erro ao desconectar Portal.');
   }
 }
 

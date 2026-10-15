@@ -279,6 +279,8 @@ export interface DatabaseSchema {
   campaigns?: PromotionCampaign[];
   demoLeads?: DemoLead[];
   globalAiPaused?: boolean;
+  salonAiPaused?: boolean;
+  portalAiPaused?: boolean;
 }
 
 export type DemoNiche =

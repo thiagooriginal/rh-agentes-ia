@@ -441,22 +441,40 @@
 
       <!-- ABA 9: WHATSAPP -->
       <section id="tab-whatsapp" class="tab-pane hidden space-y-6">
-        <div>
-          <h2 class="text-xl font-bold">Conexão do WhatsApp</h2>
-          <p class="text-xs text-slate-400">Escaneie o QR Code no WhatsApp da empresa para ativar o atendimento 24 horas.</p>
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h2 class="text-xl font-bold">Conexões de WhatsApp (Multi-Linhas)</h2>
+            <p class="text-xs text-slate-400">Gerencie independentemente as conexões do Salão e do Portal de Agentes de IA.</p>
+          </div>
+          <a href="/vitrine.html" target="_blank" class="px-3.5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-95 text-white rounded-xl text-xs font-semibold flex items-center gap-2 shadow-md">
+            <i data-lucide="external-link" class="w-4 h-4"></i>
+            <span>Abrir Portal de IA (Vitrine)</span>
+          </a>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-          <div class="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col items-center text-center">
-            <div id="qrBox" class="w-64 h-64 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center p-4 mb-4 relative overflow-hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          
+          <!-- CARD 1: WHATSAPP DO SALÃO (LINHA 1) -->
+          <div class="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col items-center text-center relative overflow-hidden">
+            <div class="w-full flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-purple-500"></span>
+                <span class="font-bold text-sm text-slate-100">Linha 1: Salão de Beleza</span>
+              </div>
+              <span id="badgeSalonLineStatus" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">Verificando...</span>
+            </div>
+
+            <p class="text-xs text-slate-400 mb-4">Recepcionista Virtual (Sofia) • Agendamentos, Preços e Gestão de Clientes</p>
+
+            <div id="qrBox" class="w-60 h-60 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center p-4 mb-4 relative overflow-hidden">
               <div id="qrLoading" class="text-center text-slate-500">
                 <i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto mb-2 text-purple-400"></i>
                 <p class="text-xs">Aguardando QR Code...</p>
               </div>
-              <img id="qrImg" src="" alt="QR Code WhatsApp" class="w-full h-full object-contain hidden" />
+              <img id="qrImg" src="" alt="QR Code WhatsApp Salão" class="w-full h-full object-contain hidden" />
               <div id="qrOk" class="hidden text-center text-emerald-400">
                 <i data-lucide="check-circle" class="w-12 h-12 mx-auto mb-2"></i>
-                <p class="font-bold text-sm">WhatsApp Conectado!</p>
+                <p class="font-bold text-sm">Salão Conectado!</p>
                 <p id="qrConnectedPhone" class="text-xs text-slate-400 mt-1"></p>
               </div>
             </div>
@@ -473,20 +491,48 @@
             </div>
           </div>
 
-          <div class="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3 text-xs text-slate-300">
-            <h3 class="font-bold text-sm text-slate-100 flex items-center gap-2">
-              <i data-lucide="smartphone" class="w-4 h-4 text-purple-400"></i>
-              <span>Como conectar:</span>
-            </h3>
-            <ol class="space-y-2 list-decimal list-inside text-slate-400">
-              <li>Abra o WhatsApp no aparelho da empresa.</li>
-              <li>Acesse <strong>Aparelhos conectados</strong> > <strong>Conectar um aparelho</strong>.</li>
-              <li>Aponte a câmera para o QR Code ao lado.</li>
-            </ol>
-            <div class="p-3 bg-purple-950/40 border border-purple-500/20 rounded-xl text-purple-300">
-              💜 <strong>Dica:</strong> A recepcionista virtual atende mensagens privadas automaticamente. Em caso de pedidos para falar com um humano, ela sinaliza a conversa no painel e pausa para você responder!
+          <!-- CARD 2: WHATSAPP DO PORTAL DAS IAS (LINHA 2 DEDICADA) -->
+          <div class="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col items-center text-center relative overflow-hidden">
+            <div class="w-full flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                <span class="font-bold text-sm text-slate-100">Linha 2: Portal das IAs (Vitrine)</span>
+              </div>
+              <span id="badgePortalLineStatus" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">Verificando...</span>
+            </div>
+
+            <p class="text-xs text-slate-400 mb-4">RH de Agentes IA • Demonstração Ao Vivo (Petshop, Estética, Dentista, Médico, etc.)</p>
+
+            <div id="portalQrBox" class="w-60 h-60 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center p-4 mb-4 relative overflow-hidden">
+              <div id="portalQrLoading" class="text-center text-slate-500">
+                <i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto mb-2 text-emerald-400"></i>
+                <p class="text-xs">Aguardando QR Code...</p>
+              </div>
+              <img id="portalQrImg" src="" alt="QR Code WhatsApp Portal" class="w-full h-full object-contain hidden" />
+              <div id="portalQrOk" class="hidden text-center text-emerald-400">
+                <i data-lucide="check-circle" class="w-12 h-12 mx-auto mb-2"></i>
+                <p class="font-bold text-sm">Portal Conectado!</p>
+                <p id="portalQrConnectedPhone" class="text-xs text-slate-400 mt-1"></p>
+              </div>
+            </div>
+
+            <div class="flex gap-2">
+              <button onclick="reconnectPortalWA()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold flex items-center gap-2">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                <span>Reconectar</span>
+              </button>
+              <button onclick="disconnectPortalWA()" class="px-4 py-2 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border border-rose-500/30 rounded-xl text-xs font-semibold flex items-center gap-2">
+                <i data-lucide="log-out" class="w-4 h-4"></i>
+                <span>Desconectar</span>
+              </button>
             </div>
           </div>
+
+        </div>
+
+        <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300">
+          💡 <strong>Separação Inteligente de Linhas:</strong>
+          <span class="text-slate-400"> O Salão de Beleza utiliza o número da Linha 1 para agendamentos e atendimento cotidiano. O Portal de Demonstrações utiliza o número da Linha 2 com número exclusivo para testar Bob, Camila, Mariana, Helena e outros colaboradores virtuais, sem nenhum conflito entre conversas!</span>
         </div>
       </section>
 

@@ -7,6 +7,7 @@ import { config } from './config.js';
 import { storage } from './db/storage.js';
 import { aiService } from './services/ai.js';
 import { whatsappService } from './services/whatsapp.js';
+import { portalWhatsAppService } from './services/portal-whatsapp.js';
 import { googleCalendar } from './services/calendar.js';
 import { campaignService } from './services/campaign.js';
 import { demoService } from './services/demo.js';
@@ -60,39 +61,67 @@ export function createServer() {
     res.json({ success: true, token, user: safeUser });
   });
 
-  // --- STATUS & WHATSAPP ---
+  // --- STATUS & WHATSAPP (SALÃO E PORTAL) ---
   app.get('/api/status', (req, res) => {
     const est = storage.getEstablishment();
     res.json({
       establishment: est,
       whatsapp: whatsappService.getStatus(),
+      portalWhatsapp: portalWhatsAppService.getStatus(),
       hasGeminiApiKey: aiService.hasApiKey(),
       hasGoogleCalendar: googleCalendar.isAvailable(),
-      isAiPaused: storage.isGlobalAiPaused()
+      isAiPaused: storage.isGlobalAiPaused(),
+      isSalonAiPaused: storage.isSalonAiPaused(),
+      isPortalAiPaused: storage.isPortalAiPaused()
     });
   });
 
-  // --- CONTROLE DE PAUSA GLOBAL DA IA ---
+  // --- CONTROLE DE PAUSA DA IA ---
   app.get('/api/ai/status', (req, res) => {
     res.json({
-      paused: storage.isGlobalAiPaused()
+      globalPaused: storage.isGlobalAiPaused(),
+      salonPaused: storage.isSalonAiPaused(),
+      portalPaused: storage.isPortalAiPaused()
     });
   });
 
   app.post('/api/ai/pause', (req, res) => {
     storage.setGlobalAiPaused(true);
-    res.json({ success: true, paused: true, message: 'Respostas automáticas da IA pausadas com sucesso.' });
+    res.json({ success: true, message: 'Todas as respostas automáticas da IA foram pausadas.' });
   });
 
   app.post('/api/ai/resume', (req, res) => {
     storage.setGlobalAiPaused(false);
-    res.json({ success: true, paused: false, message: 'Respostas automáticas da IA reativadas com sucesso.' });
+    storage.setSalonAiPaused(false);
+    storage.setPortalAiPaused(false);
+    res.json({ success: true, message: 'Todas as respostas automáticas da IA foram reativadas.' });
   });
 
+  app.post('/api/ai/salon/pause', (req, res) => {
+    storage.setSalonAiPaused(true);
+    res.json({ success: true, paused: true, message: 'IA do Salão pausada.' });
+  });
+
+  app.post('/api/ai/salon/resume', (req, res) => {
+    storage.setSalonAiPaused(false);
+    res.json({ success: true, paused: false, message: 'IA do Salão reativada.' });
+  });
+
+  app.post('/api/ai/portal/pause', (req, res) => {
+    storage.setPortalAiPaused(true);
+    res.json({ success: true, paused: true, message: 'IA do Portal das IAs pausada.' });
+  });
+
+  app.post('/api/ai/portal/resume', (req, res) => {
+    storage.setPortalAiPaused(false);
+    res.json({ success: true, paused: false, message: 'IA do Portal das IAs reativada.' });
+  });
+
+  // --- WHATSAPP SALÃO (LINHA 1) ---
   app.post('/api/whatsapp/connect', async (req, res) => {
     try {
       await whatsappService.start();
-      res.json({ success: true, message: 'Iniciando conexão com WhatsApp...' });
+      res.json({ success: true, message: 'Iniciando conexão com WhatsApp do Salão...' });
     } catch (e: any) {
       res.status(500).json({ success: false, error: e.message });
     }
@@ -101,7 +130,30 @@ export function createServer() {
   app.post('/api/whatsapp/disconnect', async (req, res) => {
     try {
       await whatsappService.disconnect();
-      res.json({ success: true, message: 'Sessão desconectada com sucesso' });
+      res.json({ success: true, message: 'Sessão do Salão desconectada com sucesso' });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // --- WHATSAPP PORTAL DAS IAS (LINHA 2 DEDICADA) ---
+  app.get('/api/portal/whatsapp/status', (req, res) => {
+    res.json(portalWhatsAppService.getStatus());
+  });
+
+  app.post('/api/portal/whatsapp/connect', async (req, res) => {
+    try {
+      await portalWhatsAppService.start();
+      res.json({ success: true, message: 'Iniciando conexão com WhatsApp do Portal das IAs...' });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.post('/api/portal/whatsapp/disconnect', async (req, res) => {
+    try {
+      await portalWhatsAppService.disconnect();
+      res.json({ success: true, message: 'Sessão do Portal das IAs desconectada com sucesso' });
     } catch (e: any) {
       res.status(500).json({ success: false, error: e.message });
     }
@@ -355,7 +407,8 @@ export function createServer() {
   app.get('/api/demo/niches', (req, res) => {
     res.json({
       niches: demoService.getNiches(),
-      whatsappStatus: whatsappService.getStatus().state
+      whatsappStatus: portalWhatsAppService.getStatus().state,
+      portalWhatsApp: portalWhatsAppService.getStatus()
     });
   });
 
@@ -368,19 +421,19 @@ export function createServer() {
     try {
       const result = await demoService.startDemoSession(name, phone, niche);
       
-      // Envia a mensagem de abertura automaticamente no WhatsApp do lead
+      // Envia a mensagem de abertura automaticamente no WhatsApp do lead via LINHA DO PORTAL
       let whatsappSent = false;
       let deliveryNote = '';
 
-      if (whatsappService.isConnected()) {
-        whatsappSent = await whatsappService.sendMessageToClient(result.lead.phone, result.openerMessage);
+      if (portalWhatsAppService.isConnected()) {
+        whatsappSent = await portalWhatsAppService.sendMessageToClient(result.lead.phone, result.openerMessage);
         if (whatsappSent) {
           deliveryNote = 'Mensagem de boas-vindas enviada para o seu WhatsApp! Responda por lá com texto ou áudio.';
         } else {
           deliveryNote = 'Não foi possível disparar a mensagem via WhatsApp neste instante. Tente novamente.';
         }
       } else {
-        deliveryNote = 'Sua demonstração foi registrada com sucesso! (Aviso: O WhatsApp do sistema está aguardando leitura do QR Code para disparo instantâneo).';
+        deliveryNote = 'Sua demonstração foi registrada com sucesso! (Aviso: O WhatsApp do Portal das IAs está aguardando leitura do QR Code para disparo instantâneo).';
       }
 
       res.json({

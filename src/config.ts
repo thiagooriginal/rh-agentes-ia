@@ -18,4 +18,5 @@ export const config = {
     .filter(Boolean),
   dataPath: path.resolve(process.cwd(), 'data', 'database.json'),
   authInfoPath: path.resolve(process.cwd(), 'auth_info_baileys'),
+  portalAuthInfoPath: path.resolve(process.cwd(), 'auth_info_portal'),
 };

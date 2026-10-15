@@ -11,7 +11,6 @@ import qrcodeTerminal from 'qrcode-terminal';
 import { config } from '../config.js';
 import { aiService } from './ai.js';
 import { storage } from '../db/storage.js';
-import { demoService } from './demo.js';
 import { WhatsAppState } from '../types.js';
 
 // Desembrulha mensagens de estruturas como deviceSentMessage, ephemeralMessage, viewOnceMessage, editedMessage
@@ -194,11 +193,8 @@ export class WhatsAppService {
             isMatchingPhone(cleanClientPhone, num) || isMatchingPhone(resolvedPhone, num)
           );
 
-          // Verifica se há sessão ativa de demonstração pelo telefone ou pelo LID
-          const activeDemoLead = demoService.getActiveLead(resolvedPhone) || demoService.getActiveLead(cleanClientPhone);
-
-          if (!isSelf && !isAllowedExternal && !activeDemoLead) {
-            console.log(`[WhatsApp Segurança] 🚫 Mensagem de ${cleanClientPhone} (resolvido: ${resolvedPhone}) ignorada: apenas seu próprio número ou leads da vitrine têm permissão.`);
+          if (!isSelf && !isAllowedExternal) {
+            console.log(`[WhatsApp Segurança Salão] 🚫 Mensagem de ${cleanClientPhone} (resolvido: ${resolvedPhone}) ignorada: apenas seu próprio número ou contatos autorizados têm acesso.`);
             continue;
           }
 
@@ -207,8 +203,8 @@ export class WhatsAppService {
             continue;
           }
 
-          const effectivePhone = isSelf ? (botPhone || '5511951364159') : (activeDemoLead ? activeDemoLead.phone : resolvedPhone);
-          const effectiveName = activeDemoLead ? activeDemoLead.name : clientName;
+          const effectivePhone = isSelf ? (botPhone || '5511951364159') : resolvedPhone;
+          const effectiveName = clientName;
 
           // Extrai áudio se presente (mensagem de voz gravada ou arquivo de áudio)
           const audioMsg = realMsg?.audioMessage;
@@ -261,15 +257,14 @@ export class WhatsAppService {
             }
           }
 
-          console.log('[WhatsApp Evento]', { 
+          console.log('[WhatsApp Salão Evento]', { 
             remoteJid, 
             cleanClientPhone, 
             resolvedPhone, 
             fromMe: msg.key.fromMe, 
             keys: rawKeys,
             isAudio: !!audioMsg, 
-            text: messageText, 
-            isDemo: !!activeDemoLead 
+            text: messageText
           });
 
           if (!messageText || messageText.trim().length === 0) {
@@ -288,65 +283,46 @@ export class WhatsAppService {
           if (isSelf || isAllowedExternal) {
             const cmd = trimmedMessage.toLowerCase();
             if (cmd === '!pausar' || cmd === '!parar' || cmd === '!pause') {
-              storage.setGlobalAiPaused(true);
+              storage.setSalonAiPaused(true);
               const targetJid = remoteJid.endsWith('@lid') ? `${effectivePhone}@s.whatsapp.net` : remoteJid;
               await this.sock?.sendMessage(targetJid, {
-                text: '⏸️ *Respostas automáticas da IA foram PAUSADAS com sucesso!*\n\nO bot não responderá mais a nenhuma mensagem nem atenderá clientes ou testes até que você envie `!retomar`.'
+                text: '⏸️ *Respostas automáticas da Recepcionista Virtual (Salão) foram PAUSADAS!*\n\nPara reativar a qualquer momento, envie `!retomar`.'
               });
               continue;
             }
             if (cmd === '!retomar' || cmd === '!play' || cmd === '!iniciar' || cmd === '!despausar') {
-              storage.setGlobalAiPaused(false);
+              storage.setSalonAiPaused(false);
               const targetJid = remoteJid.endsWith('@lid') ? `${effectivePhone}@s.whatsapp.net` : remoteJid;
               await this.sock?.sendMessage(targetJid, {
-                text: '▶️ *Respostas automáticas da IA REATIVADAS com sucesso!*\n\nO bot voltará a responder clientes e demonstrações normalmente.'
+                text: '▶️ *Recepcionista Virtual do Salão REATIVADA com sucesso!*\n\nVoltando a responder agendamentos e clientes normalmente.'
               });
               continue;
             }
             if (cmd === '!status') {
-              const isPaused = storage.isGlobalAiPaused();
+              const isPaused = storage.isSalonAiPaused();
               const targetJid = remoteJid.endsWith('@lid') ? `${effectivePhone}@s.whatsapp.net` : remoteJid;
               await this.sock?.sendMessage(targetJid, {
-                text: `🤖 *RH de Agentes IA - Status Atual:*\n• Respostas Automáticas: ${isPaused ? '⏸️ PAUSADAS' : '▶️ ATIVAS'}\n• Linha: ${effectivePhone}\n\nEnvie \`!pausar\` ou \`!retomar\` para alternar.`
+                text: `💇‍♀️ *Studio Bella - Status da Recepcionista:*\n• Atendimento Automático: ${isPaused ? '⏸️ PAUSADO' : '▶️ ATIVO'}\n• Linha: ${effectivePhone}\n\nEnvie \`!pausar\` ou \`!retomar\` para alternar.`
               });
               continue;
             }
           }
 
-          // 2. VERIFICAÇÃO DE PAUSA GLOBAL
-          if (storage.isGlobalAiPaused()) {
-            console.log(`[WhatsApp ⏸️ IA Pausada] Mensagem de ${cleanClientPhone} (${effectivePhone}) ignorada: Respostas automáticas estão pausadas globalmente.`);
+          // 2. VERIFICAÇÃO DE PAUSA DA IA DO SALÃO
+          if (storage.isSalonAiPaused()) {
+            console.log(`[WhatsApp Salão ⏸️ IA Pausada] Mensagem de ${cleanClientPhone} (${effectivePhone}) ignorada: Respostas automáticas do salão estão pausadas.`);
             continue;
           }
 
-          // 3. PROTEÇÃO ANTI-LOOP: Detecta se a mensagem recebida é de outro robô/assistente
-          if (demoService.isPotentialBot(trimmedMessage)) {
-            console.log(`[WhatsApp 🤖 Anti-Loop] Detectada mensagem de outro assistente/bot vinda de ${cleanClientPhone}. Abortando envio para evitar loop.`);
-            if (activeDemoLead) {
-              demoService.completeDemoLead(activeDemoLead.id);
-            }
-            continue;
-          }
-
-          // 4. Se a mensagem for idêntica à última resposta emitida pela IA, evita loop
+          // 3. Se a mensagem for idêntica à última resposta emitida pela IA, evita loop
           if (this.recentBotReplies.has(trimmedMessage)) {
             continue;
           }
 
-          // 5. Verifica se está sob intervenção humana
+          // 4. Verifica se está sob intervenção humana
           if (storage.isHumanInterventionActive(effectivePhone)) {
-            console.log(`[WhatsApp] Conversa com ${effectivePhone} sob intervenção humana.`);
+            console.log(`[WhatsApp Salão] Conversa com ${effectivePhone} sob intervenção humana.`);
             storage.saveConversationMessage(effectivePhone, 'user', trimmedMessage);
-            continue;
-          }
-
-          // 6. LIMITE DE MENSAGENS PARA DEMOS DA VITRINE (Máximo 8 mensagens por lead)
-          if (activeDemoLead && demoService.isLeadLimitReached(activeDemoLead)) {
-            console.log(`[WhatsApp Vitrine Demo] Limite de mensagens atingido para lead ${activeDemoLead.name} (${activeDemoLead.phone}).`);
-            const completionMsg = `🌟 *Demonstração ao vivo concluída com sucesso!*\n\nVocê pôde comprovar na prática a velocidade, precisão e o atendimento humanizado do nosso colaborador digital do *RH de Agentes IA*!\n\n🚀 Para contratar e ativar este agente com um número exclusivo no seu negócio, acesse nosso site ou fale com nosso time!`;
-            demoService.completeDemoLead(activeDemoLead.id);
-            const targetJid = remoteJid.endsWith('@lid') ? `${effectivePhone}@s.whatsapp.net` : remoteJid;
-            await this.sock?.sendMessage(targetJid, { text: completionMsg });
             continue;
           }
 
@@ -356,20 +332,8 @@ export class WhatsAppService {
               await this.sock.sendPresenceUpdate('composing', remoteJid);
             }
 
-            let replyText = '';
-            if (activeDemoLead) {
-              console.log(`[WhatsApp Vitrine Demo 🌟] Respondendo lead "${activeDemoLead.name}" (${activeDemoLead.niche}): "${trimmedMessage}"`);
-              demoService.recordInteraction(cleanClientPhone);
-              replyText = await aiService.processDemoMessage(
-                effectivePhone,
-                trimmedMessage,
-                activeDemoLead.name,
-                activeDemoLead.niche
-              );
-            } else {
-              console.log(`[WhatsApp 👤 Seu Número] Processando mensagem com IA do Salão: "${trimmedMessage}"`);
-              replyText = await aiService.processMessage(effectivePhone, trimmedMessage, effectiveName);
-            }
+            console.log(`[WhatsApp 👤 Salão] Processando mensagem com IA: "${trimmedMessage}"`);
+            const replyText = await aiService.processMessage(effectivePhone, trimmedMessage, effectiveName);
 
             // Armazena no cache recente para não gerar auto-eco
             this.recentBotReplies.add(replyText.trim());
@@ -430,15 +394,6 @@ export class WhatsAppService {
         }
         this.recentBotReplies.add(text.trim());
         storage.saveConversationMessage(phone, 'assistant', text);
-
-        // Se o Baileys mapear o LID deste telefone, associa no demoService
-        try {
-          const lidJid = await (this.sock as any)?.signalRepository?.lidMapping?.getLIDForPN(remoteJid);
-          if (lidJid) {
-            const cleanLid = lidJid.split('@')[0].split(':')[0].replace(/\D/g, '');
-            demoService.mapLidToPhone(cleanLid, clean);
-          }
-        } catch (e) {}
 
         // Se for o próprio número do bot (self-chat), também sincroniza no @lid para aparecer na tela
         const botPhone = (this.sock?.user?.id?.split('@')[0]?.split(':')[0] || '').replace(/\D/g, '');

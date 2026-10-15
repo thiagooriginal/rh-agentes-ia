@@ -1337,15 +1337,37 @@ class StorageManager {
     });
   }
 
-  // --- PAUSA GLOBAL DE INTELIGÊNCIA ARTIFICIAL ---
+  // --- CONTROLE DE PAUSA DA IA (GLOBAL, SALÃO E PORTAL) ---
   public isGlobalAiPaused(): boolean {
-    return this.db.globalAiPaused !== false; // Default true (pausado) por segurança
+    return this.db.globalAiPaused === true;
   }
 
   public setGlobalAiPaused(paused: boolean): void {
     this.db.globalAiPaused = paused;
     this.saveData(this.db);
     console.log(`[Storage] 🛑 Pausa Global da IA atualizada para: ${paused ? 'PAUSADA ⏸️' : 'ATIVA ▶️'}`);
+  }
+
+  public isSalonAiPaused(): boolean {
+    if (this.db.globalAiPaused === true) return true;
+    return this.db.salonAiPaused === true;
+  }
+
+  public setSalonAiPaused(paused: boolean): void {
+    this.db.salonAiPaused = paused;
+    this.saveData(this.db);
+    console.log(`[Storage] 🛑 Pausa da IA do Salão atualizada para: ${paused ? 'PAUSADA ⏸️' : 'ATIVA ▶️'}`);
+  }
+
+  public isPortalAiPaused(): boolean {
+    if (this.db.globalAiPaused === true) return true;
+    return this.db.portalAiPaused === true;
+  }
+
+  public setPortalAiPaused(paused: boolean): void {
+    this.db.portalAiPaused = paused;
+    this.saveData(this.db);
+    console.log(`[Storage] 🛑 Pausa da IA do Portal atualizada para: ${paused ? 'PAUSADA ⏸️' : 'ATIVA ▶️'}`);
   }
 }
 
