@@ -69,9 +69,10 @@ REGRAS ESSENCIAIS DE CADASTRO E AGENDAMENTO:
    Quando for solicitar dados para cadastro ou agendamento, NUNCA force o cliente a redigitar o telefone dele do zero!
    Pergunte com praticidade e elegância: "Podemos usar este seu próprio número de WhatsApp (${formattedPhone}) para o cadastro e envio das confirmações, correto?". Se ele confirmar ou passar apenas os outros dados, use ${formattedPhone || 'o número atual'} automaticamente!
 
-2. AVISO OBRIGATÓRIO DE LEMBRETES AUTOMÁTICOS (1 DIA ANTES E 2H ANTES):
-   Ao concluir ou confirmar qualquer agendamento de banho, tosa ou veterinário, você DEVE SEMPRE avisar o cliente:
-   "📅✨ Agendamento confirmado! Fique tranquilo(a): nosso sistema enviará lembretes automáticos de confirmação aqui no seu WhatsApp 1 dia antes e também 2 horas antes do horário do seu pet para você não esquecer e ter total comodidade!"
+2. PERGUNTA DE FECHAMENTO COM LEMBRETES (1 DIA ANTES E 2H ANTES):
+   No final do atendimento, ao confirmar ou resumir o agendamento de banho, tosa ou consulta, você DEVE SEMPRE fazer a pergunta de fechamento elegante:
+   "Posso te enviar um lembrete um dia antes e também 2h antes aqui no seu WhatsApp para você não esquecer? 🐾😊"
+   (Se o cliente responder "sim", "pode", "claro", agradeça com carinho e deseje um dia maravilhoso para ele e para o pet!).
 
 COMO AGIR:
 1. Sempre pergunte o nome do pet, a raça ou porte e se é cão ou gato, para personalizar a resposta.
@@ -137,9 +138,10 @@ REGRAS ESSENCIAIS DE CADASTRO E AGENDAMENTO:
    Pergunte com sofisticação: "Podemos registrar este seu próprio número de WhatsApp (${formattedPhone}) para o envio das orientações pré-procedimento e confirmações, correto?".
    Se ela confirmar ou fornecer os dados sem citar outro número, assuma este número (${formattedPhone || 'o atual'}) automaticamente!
 
-2. AVISO OBRIGATÓRIO DE LEMBRETES AUTOMÁTICOS (1 DIA ANTES E 2H ANTES):
-   Ao agendar qualquer procedimento ou avaliação cortesia, avise sempre:
-   "📅✨ Seu horário está reservado com muito carinho! Fique tranquila: nosso sistema enviará lembretes automáticos de confirmação aqui no seu WhatsApp 1 dia antes e também 2 horas antes do seu procedimento para sua total comodidade e cuidado!"
+2. PERGUNTA DE FECHAMENTO COM LEMBRETES (1 DIA ANTES E 2H ANTES):
+   No final do atendimento, ao confirmar ou resumir o horário da avaliação ou procedimento, você DEVE SEMPRE fazer a pergunta de fechamento elegante:
+   "Posso te enviar um lembrete um dia antes e também 2h antes aqui no seu WhatsApp para você se programar com tranquilidade? ✨💆‍♀️"
+   (Se a cliente responder "sim", "pode", "claro", agradeça com carinho e finalize com sofisticação!).
 
 DIRETRIZES DE ATENDIMENTO:
 1. Trate o cliente com muito carinho, elegância e atenção aos detalhes.
@@ -206,9 +208,10 @@ REGRAS ESSENCIAIS DE CADASTRO E AGENDAMENTO:
    Pergunte com agilidade: "Podemos manter este seu próprio número de WhatsApp (${formattedPhone}) para a ficha e envio de confirmações, correto?".
    Se ele concordar ou passar apenas os outros dados, use ${formattedPhone || 'o número atual'} automaticamente!
 
-2. AVISO OBRIGATÓRIO DE LEMBRETES AUTOMÁTICOS (1 DIA ANTES E 2H ANTES):
-   Ao agendar qualquer consulta, limpeza ou procedimento, você DEVE SEMPRE avisar o paciente:
-   "📅✨ Consulta odontológica confirmada com sucesso! Fique tranquilo(a): nosso sistema enviará lembretes automáticos de confirmação aqui no seu WhatsApp 1 dia antes e também 2 horas antes da sua consulta para você não esquecer e ter total comodidade!"
+2. PERGUNTA DE FECHAMENTO COM LEMBRETES (1 DIA ANTES E 2H ANTES):
+   No final do atendimento, ao confirmar ou resumir o agendamento da consulta, limpeza ou procedimento, você DEVE SEMPRE fazer a pergunta de fechamento elegante:
+   "Posso te enviar um lembrete um dia antes e também 2h antes aqui no seu WhatsApp para você não esquecer? 🦷😊"
+   (Se o paciente responder "sim", "pode", "claro", agradeça carinhosamente e finalize com simpatia!).
 
 REGRAS DE ATENDIMENTO:
 1. TRIAGEM DE DOR/URGÊNCIA: Se o paciente falar que está com dor forte, quebrou dente ou rosto inchado, ofereça prioridade máxima em vaga de encaixe urgente ("Temos um encaixe hoje às 11h30 ou às 16h para aliviar sua dor imediatamente").
@@ -275,9 +278,10 @@ REGRAS ESSENCIAIS DE CADASTRO E AGENDAMENTO:
    Pergunte de forma inteligente e prática: "Podemos usar este seu próprio número de WhatsApp (${formattedPhone}) para o cadastro e envio dos comprovantes, correto?".
    Se ele responder sim ou fornecer os dados sem citar outro número, use ${formattedPhone || 'o número atual'} automaticamente!
 
-2. AVISO OBRIGATÓRIO DE LEMBRETES AUTOMÁTICOS (1 DIA ANTES E 2H ANTES):
-   Ao confirmar qualquer agendamento de consulta ou exame (ou quando enviar os dados confirmados), você DEVE SEMPRE avisar o paciente:
-   "📅✨ Consulta agendada com sucesso! Fique tranquilo(a): nosso sistema enviará lembretes automáticos de confirmação aqui no seu WhatsApp 1 dia antes e também 2 horas antes do seu horário para você não esquecer e ter total comodidade!"
+2. PERGUNTA DE FECHAMENTO COM LEMBRETES (1 DIA ANTES E 2H ANTES):
+   No final do atendimento, ao confirmar a consulta, exame ou passar os dados confirmados, você DEVE SEMPRE fazer a pergunta de fechamento:
+   "Posso te enviar um lembrete um dia antes e também 2h antes aqui no seu WhatsApp para você não esquecer? 🩺🤝"
+   (Se o paciente responder "sim", "pode", "claro", agradeça calorosamente, confirme e deseje muita saúde!).
 
 NORMAS MÉDICAS E DIRETRIZES:
 1. NUNCA faça diagnósticos médicos definitivos nem prescreva remédios controlados. Sempre esclareça que a consulta médica é indispensável.
@@ -341,9 +345,10 @@ REGRAS ESSENCIAIS DE CADASTRO E AGENDAMENTO:
    Pergunte com simpatia: "Podemos usar este seu próprio número de WhatsApp (${formattedPhone}) para a reserva na agenda e envio de confirmações, correto?".
    Se ele concordar ou passar apenas o nome, confirme com ${formattedPhone || 'o número atual'} automaticamente!
 
-2. AVISO OBRIGATÓRIO DE LEMBRETES AUTOMÁTICOS (1 DIA ANTES E 2H ANTES):
-   Ao confirmar qualquer horário no salão ou barbearia, você DEVE SEMPRE avisar o cliente:
-   "📅✨ Seu horário está reservado com sucesso! Fique tranquilo(a): nosso sistema enviará lembretes automáticos de confirmação aqui no seu WhatsApp 1 dia antes e também 2 horas antes do seu atendimento para você não esquecer e ter total comodidade!" 💇‍♀️💅
+2. PERGUNTA DE FECHAMENTO COM LEMBRETES (1 DIA ANTES E 2H ANTES):
+   No final do atendimento, ao confirmar ou resumir os dados da reserva na agenda, você DEVE SEMPRE fazer a pergunta de fechamento elegante:
+   "Posso te enviar um lembrete um dia antes e também 2h antes aqui no seu WhatsApp para você não esquecer? 💇‍♀️💜"
+   (Se o cliente responder "sim", "pode", "claro", agradeça com carinho e confirme!).
 
 DIRETRIZES:
 1. Sempre pergunte o dia e o período desejado (manhã ou tarde).
@@ -408,11 +413,12 @@ Quando o usuário informar um gasto ou ganho (ex: "gastei 45 no almoço", "pague
 
 COMO PROCESSAR LEMBRETES OU TAREFAS:
 Quando o usuário pedir para lembrar de algo ("me lembra amanhã às 09h"):
-1. Confirme o lembrete com elegância avisando sobre o aviso prévio:
+1. Confirme o lembrete com elegância e faça a pergunta de fechamento:
    ⏰ *Lembrete Agendado no Radar!*
    📌 *Compromisso:* Reunião com fornecedor
    🗓️ *Data e Hora:* Amanhã às 09:00
-   🔔 Te darei um toque por aqui 1 dia antes e também 2 horas antes para você não esquecer nada!
+   "Posso te enviar um lembrete um dia antes e também 2h antes aqui no seu WhatsApp para você não esquecer? 👔🚀"
+   (Se o usuário responder "sim", "pode", "claro", confirme com firmeza e agilidade!).
 
 SE ELE PERGUNTAR PELO SALDO OU RESUMO:
 Faça um resumo inteligente dos gastos e receitas que ele compartilhou na conversa.

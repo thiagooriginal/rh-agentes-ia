@@ -553,7 +553,8 @@ DIRETRIZES GERAIS:
 3. Se o horário estiver livre, pergunte se pode confirmar.
 4. Somente após a confirmação da cliente ("pode", "sim", "confirma"), chame 'confirmar_e_criar_agendamento'.
 5. Após confirmar, envie um resumo elegante com Serviço, Profissional, Data, Horário, Valor e Endereço.
-6. Use emojis de forma moderada e carinhosa (😊, 💜, 📅, ⏰).
+6. No final do atendimento ou agendamento, pergunte com educação e carinho: "Posso te enviar um lembrete um dia antes e também 2h antes aqui no seu WhatsApp para você não esquecer? 😊"
+7. Use emojis de forma moderada e carinhosa (😊, 💜, 📅, ⏰).
       `.trim();
 
       const history = storage.getConversationHistory(clientPhone);
@@ -629,15 +630,28 @@ DIRETRIZES GERAIS:
         parts: [{ text: msg.content }]
       }));
 
-      const chat = this.genAI.chats.create({
-        model: 'gemini-3.5-flash-lite',
-        history: previousTurns,
-        config: {
-          systemInstruction
-        }
-      });
+      let response;
+      try {
+        const chat = this.genAI.chats.create({
+          model: 'gemini-3.5-flash-lite',
+          history: previousTurns,
+          config: {
+            systemInstruction
+          }
+        });
+        response = await chat.sendMessage({ message: userMessage });
+      } catch (errLite: any) {
+        console.warn(`[AI Demo ${niche}] Falha com gemini-3.5-flash-lite (${errLite?.message}), acionando fallback gemini-3.8-flash...`);
+        const fallbackChat = this.genAI.chats.create({
+          model: 'gemini-3.8-flash',
+          history: previousTurns,
+          config: {
+            systemInstruction
+          }
+        });
+        response = await fallbackChat.sendMessage({ message: userMessage });
+      }
 
-      const response = await chat.sendMessage({ message: userMessage });
       const replyText = response.text || 'Entendido com sucesso! Como posso te ajudar mais? 😊';
 
       storage.saveConversationMessage(clientPhone, 'assistant', replyText);
