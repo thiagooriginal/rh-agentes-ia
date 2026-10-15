@@ -440,6 +440,7 @@ export function createServer() {
         success: true,
         whatsappSent,
         deliveryNote,
+        portalPhone: portalWhatsAppService.getStatus().phoneNumber || '5511965574389',
         lead: result.lead,
         persona: result.persona,
         openerMessage: result.openerMessage

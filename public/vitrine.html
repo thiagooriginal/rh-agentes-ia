@@ -202,23 +202,26 @@
   <!-- ======================================================== -->
   <!-- MODAL: LIVE TEST DRIVE (DISPARO NO WHATSAPP DO VISITANTE) -->
   <!-- ======================================================== -->
-  <div id="testDriveModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden opacity-0 transition-opacity duration-300">
-    <div class="glass-card bg-slate-900 border border-slate-700/80 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl relative text-left transition-all transform scale-95" id="testDriveModalContent">
+  <!-- ======================================================== -->
+  <!-- MODAL: LIVE TEST DRIVE (DISPARO NO WHATSAPP DO VISITANTE) -->
+  <!-- ======================================================== -->
+  <div id="testDriveModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md hidden opacity-0 transition-opacity duration-300 overflow-y-auto">
+    <div class="glass-card bg-slate-900 border border-slate-700/80 rounded-3xl max-w-md w-full my-auto overflow-hidden shadow-2xl relative text-left transition-all transform scale-95 flex flex-col" id="testDriveModalContent">
       
       <!-- Close Button -->
-      <button onclick="closeTestDriveModal()" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition z-10">
+      <button onclick="closeTestDriveModal()" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition z-10 cursor-pointer">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
 
       <!-- Modal Header Persona Info -->
-      <div id="modalHeaderBg" class="p-6 bg-gradient-to-r from-purple-900/40 via-indigo-900/30 to-slate-900 border-b border-slate-800">
-        <div class="flex items-center gap-4">
-          <div id="modalAgentIcon" class="w-14 h-14 rounded-2xl bg-purple-600/20 border border-purple-500/40 flex items-center justify-center text-3xl shadow-lg">
+      <div id="modalHeaderBg" class="p-5 sm:p-6 bg-gradient-to-r from-purple-900/40 via-indigo-900/30 to-slate-900 border-b border-slate-800">
+        <div class="flex items-center gap-3.5">
+          <div id="modalAgentIcon" class="w-13 h-13 rounded-2xl bg-purple-600/20 border border-purple-500/40 flex items-center justify-center text-3xl shadow-lg shrink-0">
             🐾
           </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <span id="modalAgentBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+          <div class="min-w-0 pr-6">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span id="modalAgentBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 truncate">
                 Pet Shop & Vet
               </span>
               <span class="text-[10px] font-semibold text-emerald-400 flex items-center gap-1">
@@ -226,19 +229,19 @@
                 IA Online 24h
               </span>
             </div>
-            <h3 id="modalAgentName" class="text-xl font-bold text-white mt-1">Bob • Pet & Cia</h3>
-            <p id="modalAgentTagline" class="text-xs text-slate-400">Agendamentos de banho e tosa por porte, vacinas e táxi dog.</p>
+            <h3 id="modalAgentName" class="text-lg sm:text-xl font-bold text-white mt-1 truncate">Bob • Pet & Cia</h3>
+            <p id="modalAgentTagline" class="text-xs text-slate-400 line-clamp-1">Agendamentos de banho e tosa por porte, vacinas e táxi dog.</p>
           </div>
         </div>
       </div>
 
       <!-- State 1: Form Input -->
-      <div id="modalStateForm" class="p-6 space-y-4">
+      <div id="modalStateForm" class="p-5 sm:p-6 space-y-4">
         
-        <div class="p-3 rounded-2xl bg-slate-800/50 border border-slate-700/60 text-xs text-slate-300 flex items-start gap-3">
-          <i data-lucide="info" class="w-4 h-4 text-purple-400 shrink-0 mt-0.5"></i>
-          <div>
-            <strong class="text-white">Como funciona a entrevista:</strong> Coloque seu nome e número de WhatsApp. O colaborador de IA entrará em contato imediatamente no seu WhatsApp para uma entrevista ao vivo. Você poderá conversar, fazer perguntas e até <strong class="text-purple-300">mandar áudios</strong> para avaliar suas habilidades!
+        <div class="p-3.5 rounded-2xl bg-slate-800/50 border border-slate-700/60 text-xs text-slate-300 flex items-start gap-3">
+          <i data-lucide="sparkles" class="w-4 h-4 text-purple-400 shrink-0 mt-0.5"></i>
+          <div class="leading-relaxed">
+            <strong class="text-white">Teste ao vivo no seu celular:</strong> Informe seu nome e WhatsApp. O colaborador de IA enviará uma mensagem educada de apresentação imediatamente para você!
           </div>
         </div>
 
@@ -259,71 +262,74 @@
               <i data-lucide="phone" class="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5"></i>
               <input type="tel" id="demoLeadPhone" required placeholder="(11) 99999-9999" maxlength="16" class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700/80 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-purple-500 transition font-mono" />
             </div>
-            <p class="text-[11px] text-slate-400 mt-1">Fique tranquilo: Não fazemos spam. O número é utilizado unicamente para esta entrevista ao vivo.</p>
+            <p class="text-[11px] text-slate-400 mt-1.5">🔒 Número protegido: usado unicamente para demonstrar o agente ao vivo.</p>
           </div>
 
-          <button type="submit" id="btnSubmitDemo" class="w-full py-3 px-4 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-purple-600 via-indigo-600 to-emerald-500 hover:from-purple-500 hover:to-emerald-400 transition shadow-lg shadow-purple-600/25 flex items-center justify-center gap-2 cursor-pointer">
-            <i data-lucide="user-check" class="w-4 h-4"></i>
-            <span>Iniciar Entrevista no Meu WhatsApp</span>
+          <button type="submit" id="btnSubmitDemo" class="w-full py-3.5 px-4 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-purple-600 via-indigo-600 to-emerald-500 hover:from-purple-500 hover:to-emerald-400 transition shadow-lg shadow-purple-600/25 flex items-center justify-center gap-2 cursor-pointer">
+            <i data-lucide="send" class="w-4 h-4"></i>
+            <span>Ver a Magia no Meu WhatsApp</span>
           </button>
         </form>
 
       </div>
 
-      <!-- State 2: Success & Live Simulator -->
-      <div id="modalStateSuccess" class="p-6 space-y-4 hidden">
+      <!-- State 2: Success (No in-site chat simulator!) -->
+      <div id="modalStateSuccess" class="p-6 space-y-5 hidden text-center">
         
-        <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-2">
-          <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 mx-auto flex items-center justify-center text-xl">
-            📲
+        <!-- Animated Icon Badge -->
+        <div class="relative w-16 h-16 mx-auto flex items-center justify-center">
+          <div class="absolute inset-0 rounded-2xl bg-emerald-500/20 pulse-effect"></div>
+          <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-white shadow-xl shadow-emerald-500/30 relative z-10 text-2xl">
+            <i data-lucide="check" class="w-8 h-8 stroke-[3]"></i>
           </div>
-          <h4 class="text-base font-bold text-emerald-300">Colaborador Conectado com Sucesso!</h4>
-          <p id="successDeliveryText" class="text-xs text-slate-300 max-w-xs mx-auto">
-            O colaborador digital acabou de te enviar uma mensagem no WhatsApp. Abra seu aplicativo e inicie a entrevista!
+        </div>
+
+        <!-- Headline & Persona intro info -->
+        <div class="space-y-2">
+          <span class="inline-block px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold">
+            ✨ Mensagem Enviada com Sucesso!
+          </span>
+          <h4 class="text-xl font-black text-white" id="successHeading">
+            Colaborador Apresentado!
+          </h4>
+          <p id="successDeliveryText" class="text-xs text-slate-300 leading-relaxed max-w-sm mx-auto">
+            O colaborador digital acabou de enviar uma saudação personalizada e educada para o seu WhatsApp.
           </p>
-          <div class="pt-2">
-            <a id="btnOpenWhatsAppDirect" href="#" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition shadow-md">
-              <i data-lucide="message-circle" class="w-4 h-4"></i>
-              <span>Abrir Conversa no WhatsApp Web / App</span>
-            </a>
-          </div>
         </div>
 
-        <!-- Live Simulated Chat Widget on Web -->
-        <div class="border border-slate-800 rounded-2xl overflow-hidden bg-slate-950">
-          <div class="px-4 py-2.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-xs">
-            <span class="font-bold text-slate-300 flex items-center gap-1.5">
-              <i data-lucide="messages-square" class="w-3.5 h-3.5 text-purple-400"></i>
-              Prévia da Conversa (Simulador)
-            </span>
-            <span class="text-[10px] text-slate-400">Você também pode testar aqui:</span>
-          </div>
-
-          <!-- Chat Screen Messages -->
-          <div id="simulatedChatHistory" class="p-4 space-y-3 max-h-56 overflow-y-auto text-xs">
-            <!-- Balões inseridos dinamicamente -->
-          </div>
-
-          <!-- Quick Test Question Chips -->
-          <div class="px-3 py-2 bg-slate-900/60 border-t border-slate-800/80">
-            <div class="text-[10px] font-semibold text-slate-400 mb-1.5">Perguntas sugeridas (clique para enviar):</div>
-            <div id="simulatedSampleChips" class="flex flex-wrap gap-1.5">
-              <!-- Chips dinâmicos -->
-            </div>
-          </div>
-
-          <!-- Input bar -->
-          <form id="simulatedChatForm" onsubmit="submitSimulatedMessage(event)" class="p-2.5 bg-slate-900 border-t border-slate-800 flex items-center gap-2">
-            <input type="text" id="simulatedInput" placeholder="Digite uma mensagem para o agente..." class="flex-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-700/80 text-white text-xs focus:outline-none focus:border-purple-500" />
-            <button type="submit" id="btnSendSimulated" class="w-8 h-8 rounded-xl bg-purple-600 hover:bg-purple-500 text-white flex items-center justify-center shrink-0 transition">
-              <i data-lucide="arrow-right" class="w-4 h-4"></i>
-            </button>
-          </form>
+        <!-- Big CTA Button to WhatsApp -->
+        <div class="pt-1">
+          <a id="btnOpenWhatsAppDirect" href="https://wa.me/5511965574389" target="_blank" class="w-full py-3.5 px-4 rounded-xl font-bold text-sm text-slate-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:brightness-105 transition shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2.5 cursor-pointer">
+            <i data-lucide="message-circle" class="w-5 h-5 fill-slate-950"></i>
+            <span>Abrir Conversa no WhatsApp Agora</span>
+          </a>
         </div>
 
-        <div class="text-center pt-1">
-          <button onclick="resetModalToForm()" class="text-xs text-slate-400 hover:text-white underline">
-            Testar outro nicho ou telefone
+        <!-- Audio & Interactive Tips -->
+        <div class="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 text-left space-y-1.5">
+          <div class="text-[11px] font-bold text-slate-200 flex items-center gap-1.5">
+            <span>💡 Como testar a inteligência do agente:</span>
+          </div>
+          <ul class="text-[11px] text-slate-400 space-y-1">
+            <li class="flex items-start gap-1.5">
+              <span class="text-emerald-400 font-bold">✓</span>
+              <span><strong>Mande áudios de voz:</strong> O agente ouve e compreende perfeitamente.</span>
+            </li>
+            <li class="flex items-start gap-1.5">
+              <span class="text-emerald-400 font-bold">✓</span>
+              <span><strong>Pergunte preços e horários:</strong> Ele consulta tabelas e agenda em tempo real.</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Secondary Actions -->
+        <div class="flex items-center justify-center gap-4 pt-1">
+          <button type="button" onclick="resetModalToForm()" class="text-xs text-purple-400 hover:text-purple-300 font-semibold underline cursor-pointer">
+            Testar outro perfil
+          </button>
+          <span class="text-slate-600">•</span>
+          <button type="button" onclick="closeTestDriveModal()" class="text-xs text-slate-400 hover:text-white cursor-pointer">
+            Fechar janela
           </button>
         </div>
 
@@ -660,7 +666,7 @@
 
       const btn = document.getElementById('btnSubmitDemo');
       btn.disabled = true;
-      btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Conectando e enviando mensagem...</span>`;
+      btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Apresentando colaborador no WhatsApp...</span>`;
       lucide.createIcons();
 
       try {
@@ -687,116 +693,26 @@
         document.getElementById('modalStateForm').classList.add('hidden');
         document.getElementById('modalStateSuccess').classList.remove('hidden');
 
-        document.getElementById('successDeliveryText').textContent = data.deliveryNote || 'Mensagem enviada com sucesso!';
-        
-        // Link direto do WhatsApp Web
-        const cleanPhone = data.lead.phone;
-        document.getElementById('btnOpenWhatsAppDirect').href = `https://wa.me/${cleanPhone}`;
+        const firstName = name.split(' ')[0];
+        const personaName = data.persona?.agentName || 'Colaborador';
+        const businessName = data.persona?.businessName || '';
 
-        // Inicia chat simulado na tela
-        initSimulatedChat(data.lead, data.persona, data.openerMessage);
+        document.getElementById('successHeading').textContent = `${personaName} já te chamou!`;
+        document.getElementById('successDeliveryText').innerHTML = `
+          Olá, <strong class="text-white">${firstName}</strong>! O colaborador digital <strong class="text-purple-300">${personaName}</strong> (${businessName}) acabou de se apresentar com uma mensagem educada e personalizada no seu WhatsApp (<span class="font-mono text-emerald-300 font-semibold">${rawPhone}</span>).
+        `;
         
+        // Link direto do WhatsApp do Portal
+        const targetBotPhone = data.portalPhone || '5511965574389';
+        document.getElementById('btnOpenWhatsAppDirect').href = `https://wa.me/${targetBotPhone}`;
+
         // Recarrega leads para atualizar badge
         loadCrmLeads();
+        lucide.createIcons();
 
       } catch (err) {
         alert('Erro ao conectar ao servidor: ' + err.message);
         resetModalToForm();
-      }
-    }
-
-    // Inicializa o chat simulado dentro do modal
-    function initSimulatedChat(lead, persona, openerMessage) {
-      const historyEl = document.getElementById('simulatedChatHistory');
-      historyEl.innerHTML = `
-        <div class="chat-bubble-agent p-3 text-xs leading-relaxed max-w-[85%]">
-          <div class="font-bold text-purple-300 text-[10px] mb-1 flex items-center gap-1">
-            <span>${persona.agentName} (${persona.businessName})</span>
-          </div>
-          ${openerMessage.replace(/\n/g, '<br/>')}
-        </div>
-      `;
-
-      // Renderiza as perguntas sugeridas
-      const chipsEl = document.getElementById('simulatedSampleChips');
-      chipsEl.innerHTML = (persona.sampleQuestions || []).map(q => `
-        <button type="button" onclick="sendSuggestedQuestion('${q.replace(/'/g, "\\'")}')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 text-[10px] transition text-left cursor-pointer">
-          💬 ${q}
-        </button>
-      `).join('');
-
-      lucide.createIcons();
-    }
-
-    function sendSuggestedQuestion(text) {
-      document.getElementById('simulatedInput').value = text;
-      document.getElementById('simulatedChatForm').dispatchEvent(new Event('submit'));
-    }
-
-    async function submitSimulatedMessage(e) {
-      e.preventDefault();
-      const input = document.getElementById('simulatedInput');
-      const text = input.value.trim();
-      if (!text || !activeLeadSession) return;
-
-      const historyEl = document.getElementById('simulatedChatHistory');
-      
-      // Adiciona mensagem do usuário na tela
-      historyEl.innerHTML += `
-        <div class="flex justify-end">
-          <div class="chat-bubble-user p-3 text-xs leading-relaxed max-w-[85%]">
-            ${text}
-          </div>
-        </div>
-      `;
-      historyEl.scrollTop = historyEl.scrollHeight;
-      input.value = '';
-
-      // Indicador digitando
-      const typingId = 'typing_' + Date.now();
-      historyEl.innerHTML += `
-        <div id="${typingId}" class="chat-bubble-agent p-2.5 text-xs text-slate-400 max-w-[50%] flex items-center gap-1.5">
-          <span class="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse"></span>
-          <span class="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse delay-100"></span>
-          <span class="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse delay-200"></span>
-          <span class="text-[10px]">digitando...</span>
-        </div>
-      `;
-      historyEl.scrollTop = historyEl.scrollHeight;
-
-      try {
-        const res = await fetch('/api/demo/simulate-chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            phone: activeLeadSession.lead.phone,
-            message: text,
-            niche: activeLeadSession.persona.id,
-            name: activeLeadSession.lead.name
-          })
-        });
-        const data = await res.json();
-        
-        // Remove typing
-        document.getElementById(typingId)?.remove();
-
-        // Adiciona resposta
-        historyEl.innerHTML += `
-          <div class="chat-bubble-agent p-3 text-xs leading-relaxed max-w-[85%]">
-            <div class="font-bold text-purple-300 text-[10px] mb-1">
-              ${activeLeadSession.persona.agentName}
-            </div>
-            ${(data.reply || '').replace(/\n/g, '<br/>')}
-          </div>
-        `;
-        historyEl.scrollTop = historyEl.scrollHeight;
-      } catch (err) {
-        document.getElementById(typingId)?.remove();
-        historyEl.innerHTML += `
-          <div class="chat-bubble-agent p-2 text-[11px] text-red-400">
-            Erro ao obter resposta da IA: ${err.message}
-          </div>
-        `;
       }
     }
 

@@ -27,8 +27,8 @@ export const NICHE_PERSONAS: Record<DemoNiche, PersonaConfig> = {
       'Tem horário para banho de cachorro grande amanhã à tarde?'
     ],
     openerMessage: (name: string) => {
-      const saudacao = name ? `Olá, ${name}! ` : 'Olá! ';
-      return `${saudacao}🐾 Sou o *Bob*, colaborador de IA especializado em Pet Shops & Clínicas Veterinárias, alocado pelo *RH de Agentes IA*!\n\nQue alegria iniciar nossa entrevista de habilidades ao vivo no seu WhatsApp! 🐶🐱\n\nComo posso cuidar do seu pet hoje? Quer agendar um *banho e tosa*, saber sobre *vacinas*, *táxi dog* ou *consulta veterinária*?\n\n💡 _Dica: Você pode me responder por texto ou me mandar uma mensagem de voz/áudio agora mesmo!_`;
+      const saudacao = name ? `Olá, ${name}! Tudo bem com você? ` : 'Olá! Tudo bem com você? ';
+      return `${saudacao}😊🐾\n\nMuito prazer! Sou o *Bob*, colaborador digital especializado em atendimento para *Pet Shops e Clínicas Veterinárias*, alocado pelo *RH de Agentes IA*.\n\nQue alegria poder falar com você aqui no seu WhatsApp! 🐶🐱\n\nComo posso cuidar do seu pet hoje? Você gostaria de saber valores de *banho e tosa*, agendar *táxi dog*, ver sobre *vacinas* ou marcar uma *consulta veterinária*?\n\n💡 _Fique super à vontade para me responder por mensagem de texto ou mandar um áudio de voz agora mesmo!_`;
     },
     systemInstruction: (leadName: string) => `
 Você é Bob, o atendente inteligente e carinhoso do "Pet & Cia Centro Veterinário", alocado pelo "RH de Agentes IA".
@@ -82,8 +82,8 @@ COMO AGIR:
       'Quero agendar uma avaliação para harmonização facial esta semana.'
     ],
     openerMessage: (name: string) => {
-      const saudacao = name ? `Olá, ${name}! ` : 'Olá! ';
-      return `${saudacao}✨ Sou a *Camila*, consultora de estética e beleza alocada pelo *RH de Agentes IA* para a *Clínica Lumière Estética Avançada*!\n\nQue maravilha iniciar nossa entrevista de habilidades ao vivo no seu WhatsApp! 💆‍♀️💎\n\nQual protocolo você gostaria de conhecer ou agendar hoje? Temos *Limpeza de Pele Profunda*, *Botox*, *Harmonização*, *Drenagem Pós-Operatória* e muito mais!\n\n💡 _Fique à vontade para me mandar uma mensagem de texto ou gravar um áudio me contando o que deseja!_`;
+      const saudacao = name ? `Olá, ${name}! Tudo bem com você? ` : 'Olá! Tudo bem com você? ';
+      return `${saudacao}✨\n\nÉ um imenso prazer falar com você! Sou a *Camila*, consultora de estética e beleza alocada pelo *RH de Agentes IA* para a *Clínica Lumière Estética Avançada*. 💆‍♀️💎\n\nEstou aqui no seu WhatsApp para te proporcionar uma experiência exclusiva de atendimento!\n\nQual protocolo você gostaria de conhecer ou agendar hoje? Temos *Limpeza de Pele Profunda*, *Botox*, *Harmonização*, *Drenagem Linfática* e avaliações personalizadas gratuitas.\n\n💡 _Você pode digitar ou se preferir gravar um áudio me contando o que você procura!_`;
     },
     systemInstruction: (leadName: string) => `
 Você é Camila, consultora estética de inteligência artificial da "Clínica Lumière Estética Avançada", alocada pelo "RH de Agentes IA".
@@ -136,8 +136,8 @@ DIRETRIZES DE ATENDIMENTO:
       'Quero agendar uma limpeza e avaliação de rotina para sábado.'
     ],
     openerMessage: (name: string) => {
-      const saudacao = name ? `Olá, ${name}! ` : 'Olá! ';
-      return `${saudacao}🦷 Sou a *Mariana*, secretária virtual odontológica selecionada pelo *RH de Agentes IA* para a *Oral Excellence Odontologia*!\n\nQue prazer iniciar nossa entrevista de habilidades diretamente no seu WhatsApp! 😊✨\n\nComo posso cuidar do seu sorriso hoje? Você gostaria de agendar uma *limpeza/avaliação*, saber sobre *clareamento dental*, *aparelhos ortodônticos* ou está sentindo algum *incômodo/dor urgente*?\n\n💡 _Você pode digitar ou enviar uma mensagem de voz agora mesmo!_`;
+      const saudacao = name ? `Olá, ${name}! Tudo bem com você? ` : 'Olá! Tudo bem com você? ';
+      return `${saudacao}😊🦷\n\nMuito prazer! Sou a *Mariana*, secretária virtual especializada em consultórios odontológicos, alocada pelo *RH de Agentes IA* para a *Oral Excellence Odontologia*.\n\nQue alegria poder te atender aqui diretamente no seu WhatsApp! ✨\n\nComo posso cuidar do seu sorriso hoje? Você gostaria de agendar uma *limpeza ou avaliação*, tirar dúvidas sobre *clareamento dental*, *aparelhos ortodônticos*, ou está com algum *desconforto ou urgência*?\n\n💡 _Pode me responder digitando ou me enviar uma mensagem de voz/áudio agora mesmo!_`;
     },
     systemInstruction: (leadName: string) => `
 Você é Mariana, secretária virtual da "Oral Excellence Odontologia", selecionada pelo "RH de Agentes IA".
@@ -191,8 +191,8 @@ REGRAS DE ATENDIMENTO:
       'Tem horário com pediatra para o meu filho ainda esta semana?'
     ],
     openerMessage: (name: string) => {
-      const saudacao = name ? `Olá, ${name}! ` : 'Olá! ';
-      return `${saudacao}🩺 Sou a *Helena*, assistente de atendimento médico selecionada pelo *RH de Agentes IA* para o *Centro Médico Vida & Saúde Integrada*.\n\nFico muito feliz em iniciar nossa entrevista ao vivo diretamente no seu WhatsApp! 🏥\n\nComo posso te ajudar hoje? Para qual especialidade você deseja agendar consulta (*Clínico Geral*, *Cardiologia*, *Dermatologia*, *Pediatria*), ou gostaria de tirar dúvidas sobre *exames*, *preparos* e *convênios*?\n\n💡 _Pode digitar sua resposta ou me mandar um áudio gravado agora mesmo!_`;
+      const saudacao = name ? `Olá, ${name}! Tudo bem com você? ` : 'Olá! Tudo bem com você? ';
+      return `${saudacao}🩺🏥\n\nSeja muito bem-vindo(a)! Sou a *Helena*, secretária de atendimento médico alocada pelo *RH de Agentes IA* para o *Centro Médico Vida & Saúde Integrada*.\n\nÉ uma honra iniciar nosso contato diretamente aqui no seu WhatsApp! 🤝\n\nComo posso te ajudar hoje? Deseja agendar uma consulta (*Clínico Geral*, *Cardiologia*, *Dermatologia*, *Pediatria*), saber sobre *telemedicina*, *convênios atendidos* ou orientações sobre *preparo de exames*?\n\n💡 _Fique à vontade para responder por mensagem de texto ou gravar um áudio!_`;
     },
     systemInstruction: (leadName: string) => `
 Você é Helena, assistente virtual do "Centro Médico Vida & Saúde Integrada", selecionada pelo "RH de Agentes IA".
@@ -203,7 +203,7 @@ Demonstrar a precisão, ética e segurança que uma secretária médica de IA of
 Tom acolhedor, altamente ético, respeitoso e esclarecedor.
 
 ESPECIALIDADES E VALORES:
--脱Clínica Geral: R$ 200 presencial | R$ 160 telemedicina (emite receita digital com assinatura ICP-Brasil).
+- Clínica Geral: R$ 200 presencial | R$ 160 telemedicina (emite receita digital com assinatura ICP-Brasil).
 - Cardiologia com Eletrocardiograma incluso: R$ 320.
 - Dermatologia Clínica e Estética: R$ 280.
 - Pediatria Geral e Puericultura: R$ 250.
@@ -246,8 +246,8 @@ NORMAS MÉDICAS E DIRETRIZES:
       'Tem combo de corte masculino e barba com toalha quente?'
     ],
     openerMessage: (name: string) => {
-      const saudacao = name ? `Olá, ${name}! ` : 'Olá! ';
-      return `${saudacao}✂️ Sou a *Sofia*, recepcionista virtual selecionada pelo *RH de Agentes IA* para o *Studio Bella & Barba Vip*!\n\nQue alegria iniciar nossa entrevista prática no seu WhatsApp! 💇‍♀️💅\n\nQual serviço você quer agendar hoje? Temos *Corte*, *Mechas*, *Progressiva*, *Manicure*, *Barbearia Vip* e muito mais! Para qual dia e horário você prefere?\n\n💡 _Você pode me responder digitando ou me mandando uma mensagem de voz/áudio agora mesmo!_`;
+      const saudacao = name ? `Olá, ${name}! Tudo bem com você? ` : 'Olá! Tudo bem com você? ';
+      return `${saudacao}💇‍♀️✨\n\nQue prazer falar com você! Sou a *Sofia*, recepcionista virtual selecionada pelo *RH de Agentes IA* para o *Studio Bella & Barba Vip*! ✂️💅\n\nEstou à sua disposição aqui no WhatsApp para agendar seus cuidados com rapidez e carinho!\n\nQual serviço você deseja realizar hoje? Temos *Cortes*, *Mechas e Coloração*, *Progressiva*, *Manicure/Pedicure* e *Barbearia Vip*. Para qual dia e horário você prefere?\n\n💡 _Pode me responder por texto ou me mandar um áudio de voz agora mesmo!_`;
     },
     systemInstruction: (leadName: string) => `
 Você é Sofia, a recepcionista virtual do "Studio Bella & Barba Vip", alocada pelo "RH de Agentes IA".
@@ -298,8 +298,8 @@ DIRETRIZES:
       'Qual foi meu total de gastos de hoje e meu saldo?'
     ],
     openerMessage: (name: string) => {
-      const saudacao = name ? `Olá, ${name}! ` : 'Olá! ';
-      return `${saudacao}👔 Sou o *Jarvis*, seu Assistente Executivo e Gestor Financeiro 24h, selecionado pelo *RH de Agentes IA*!\n\nPronto para organizar sua rotina executiva e controlar seu dinheiro sem planilhas chatas. 📊🚀\n\nFaça o teste prático agora mesmo: me mande um texto ou grave um áudio dizendo algo como:\n• _"Jarvis, gastei 52 reais no almoço com cliente"_\n• _"Me lembra amanhã às 14h de pagar o DAS"_\n• _"Recebi R$ 800 de um cliente"_\n\nManda ver, estou pronto para trabalhar com você! 🎙️⚡`;
+      const saudacao = name ? `Olá, ${name}! Tudo bem com você? ` : 'Olá! Tudo bem com você? ';
+      return `${saudacao}👔💼\n\nMuito prazer em falar com você! Sou o *Jarvis*, seu Assistente Executivo e Gestor Financeiro 24h, selecionado pelo *RH de Agentes IA*.\n\nEstou aqui no seu WhatsApp para simplificar sua rotina e manter suas finanças e tarefas sempre organizadas, sem burocracia e sem planilhas! 📊🚀\n\nFaça um teste prático comigo agora mesmo! Me mande uma mensagem de texto ou grave um áudio dizendo:\n• _"Jarvis, gastei 45 reais no almoço com cliente"_\n• _"Me lembra amanhã às 14h de pagar o DAS"_\n• _"Recebi R$ 800 de um cliente"_\n\nPode mandar, estou pronto para trabalhar com você! 🎙️⚡`;
     },
     systemInstruction: (leadName: string) => `
 Você é Jarvis, o Assistente Executivo e Gestor Financeiro de ${leadName || 'seu usuário'}, selecionado pelo "RH de Agentes IA".
