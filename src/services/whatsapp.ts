@@ -91,6 +91,7 @@ export class WhatsAppService {
               qrCodeDataUrl: dataUrl,
               lastUpdated: new Date().toISOString()
             };
+            this.isConnecting = false;
           } catch (e) {
             console.error('[WhatsApp] Erro ao gerar DataURL do QR Code:', e);
           }

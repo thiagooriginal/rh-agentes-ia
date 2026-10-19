@@ -94,6 +94,7 @@ export class PortalWhatsAppService {
               qrCodeDataUrl: dataUrl,
               lastUpdated: new Date().toISOString()
             };
+            this.isConnecting = false;
           } catch (e) {
             console.error('[Portal WhatsApp] Erro ao gerar DataURL do QR Code:', e);
           }
@@ -119,14 +120,16 @@ export class PortalWhatsAppService {
 
         if (connection === 'close') {
           const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
+          const errMsg = lastDisconnect?.error?.message || (lastDisconnect?.error as any)?.output?.payload?.message || `code_${statusCode}`;
           const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401;
 
-          console.log(`[Portal WhatsApp] Sessão desconectada (código ${statusCode}). Reconectar: ${shouldReconnect}`);
+          console.log(`[Portal WhatsApp] Sessão desconectada (código ${statusCode}: ${errMsg}). Reconectar: ${shouldReconnect}`);
 
           this.state = {
             state: 'disconnected',
             qrCodeDataUrl: undefined,
-            lastUpdated: new Date().toISOString()
+            lastUpdated: new Date().toISOString(),
+            error: `Disconnect code ${statusCode}: ${errMsg}`
           };
           this.isConnecting = false;
 
@@ -517,12 +520,13 @@ export class PortalWhatsAppService {
         }
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Portal WhatsApp] Falha ao inicializar Baileys:', error);
       this.isConnecting = false;
       this.state = {
         state: 'disconnected',
-        lastUpdated: new Date().toISOString()
+        lastUpdated: new Date().toISOString(),
+        error: error?.message || String(error)
       };
     }
   }

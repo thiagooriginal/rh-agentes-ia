@@ -326,5 +326,6 @@ export interface WhatsAppState {
   qrCodeDataUrl?: string;
   phoneNumber?: string;
   lastUpdated: string;
+  error?: string;
 }
 
