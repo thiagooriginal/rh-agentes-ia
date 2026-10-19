@@ -191,13 +191,20 @@ export class WhatsAppService {
                          isMatchingPhone(resolvedPhone, botPhone) || 
                          (botLid && (cleanClientPhone === botLid || resolvedPhone === botLid));
 
-          const isAllowedExternal = [adminPhone, ...config.allowedPhoneNumbers].filter(Boolean).some(num => 
-            isMatchingPhone(cleanClientPhone, num) || isMatchingPhone(resolvedPhone, num)
-          );
+          const isOwner = cleanClientPhone.endsWith('958527119') || resolvedPhone.endsWith('958527119');
+          const isAdminUser = isSelf || isOwner || isMatchingPhone(cleanClientPhone, adminPhone) || isMatchingPhone(resolvedPhone, adminPhone);
 
-          if (!isSelf && !isAllowedExternal) {
-            console.log(`[WhatsApp Segurança Salão] 🚫 Mensagem de ${cleanClientPhone} (resolvido: ${resolvedPhone}) ignorada: apenas seu próprio número ou contatos autorizados têm acesso.`);
-            continue;
+          // Verifica se há whitelist ativa. Se não houver, QUALQUER NÚMERO pode fazer o teste!
+          const hasStrictWhitelist = config.allowedPhoneNumbers.length > 0 && !config.allowedPhoneNumbers.includes('*');
+          if (hasStrictWhitelist) {
+            const isAllowedExternal = isAdminUser || config.allowedPhoneNumbers.some(num => 
+              isMatchingPhone(cleanClientPhone, num) || isMatchingPhone(resolvedPhone, num)
+            );
+
+            if (!isSelf && !isAllowedExternal) {
+              console.log(`[WhatsApp Segurança Salão] 🚫 Mensagem de ${cleanClientPhone} (resolvido: ${resolvedPhone}) ignorada por restrição de whitelist.`);
+              continue;
+            }
           }
 
           // Se for mensagem enviada por si mesmo (fromMe), aceita APENAS no chat consigo mesmo (self-chat)
@@ -205,7 +212,7 @@ export class WhatsAppService {
             continue;
           }
 
-          const effectivePhone = isSelf ? (botPhone || '5511951364159') : resolvedPhone;
+          const effectivePhone = isSelf ? (botPhone || '5511958527119') : resolvedPhone;
           const effectiveName = clientName;
 
           // Extrai áudio se presente (mensagem de voz gravada ou arquivo de áudio)
@@ -313,7 +320,7 @@ export class WhatsAppService {
           const trimmedMessage = messageText.trim();
 
           // 1. COMANDOS DE ADMINISTRAÇÃO DIRETA PELO WHATSAPP (Sempre processados mesmo pausado)
-          if (isSelf || isAllowedExternal) {
+          if (isAdminUser) {
             const cmd = trimmedMessage.toLowerCase();
             if (cmd === '!pausar' || cmd === '!parar' || cmd === '!pause') {
               storage.setSalonAiPaused(true);

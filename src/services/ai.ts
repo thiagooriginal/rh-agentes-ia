@@ -421,7 +421,7 @@ export class AIService {
         storage.setHumanIntervention(clientPhone, true);
         return {
           sucesso: true,
-          mensagem: `Atendimento transferido para a recepção humana. O número do salão é ${establishment.transferToHumanPhone || establishment.phone}.`
+          mensagem: `Atendimento transferido com sucesso! O proprietário e responsável geral é o Thiago no WhatsApp (11) 95852-7119. Ele já foi notificado e pode falar diretamente com você a qualquer momento.`
         };
       }
 
@@ -505,13 +505,13 @@ export class AIService {
       const diaSemanaHoje = diasSemana[now.getDay()];
       const horaHoje = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-      const adminPhone = (establishment.adminNotificationPhone || config.adminPhone || '').replace(/\D/g, '');
+      const adminPhone = (establishment.adminNotificationPhone || config.adminPhone || '5511958527119').replace(/\D/g, '');
       const cleanSender = clientPhone.replace(/\D/g, '');
-      const isSenderAdmin = cleanSender === adminPhone || cleanSender === '5511951364159';
+      const isSenderAdmin = cleanSender === adminPhone || cleanSender.endsWith('958527119') || cleanSender === '5511958527119';
 
       const adminInstructions = isSenderAdmin ? `
 MODO ADMINISTRADOR (DONO DO SALÃO):
-Você está conversando diretamente com o PROPRIETÁRIO/ADMINISTRADOR do salão (${clientName || 'Thiago'})!
+Você está conversando diretamente com o PROPRIETÁRIO/ADMINISTRADOR do salão (Thiago)!
 O Administrador tem poderes de gestão:
 1. LANÇAR PROMOÇÃO RELÂMPAGO:
    - Se o dono pedir para enviar, lançar ou disparar uma promoção para as clientes (ex: "lança promoção de progressiva hoje", "avisa as clientes sobre desconto de 20%"):
@@ -622,7 +622,21 @@ DIRETRIZES GERAIS:
 
     try {
       const persona = demoService.getPersona(niche);
-      const systemInstruction = persona.systemInstruction(clientName, clientPhone);
+      let systemInstruction = persona.systemInstruction(clientName, clientPhone);
+
+      // Diretiva mestre do Dono / Proprietário Geral (Thiago - 11 95852-7119)
+      const isOwner = clientPhone.replace(/\D/g, '').endsWith('958527119');
+      if (isOwner) {
+        systemInstruction += `\n\n👑 ATENÇÃO ESPECIAL: Você está conversando diretamente com o THIAGO (${clientPhone}), o PROPRIETÁRIO/DONO deste negócio e da plataforma RH de Agentes IA!\n` +
+          `- Trate-o com deferência e cordialidade como o Dono da empresa.\n` +
+          `- Chame-o de Thiago ou Senhor Thiago.\n` +
+          `- Preste contas, detalhe os atendimentos e permita testes administrativos.`;
+      } else {
+        systemInstruction += `\n\n👑 INFORMAÇÃO DO PROPRIETÁRIO / DONO:\n` +
+          `- Dono / Proprietário Geral Responsável: THIAGO\n` +
+          `- WhatsApp Direto do Dono: (11) 95852-7119 (5511958527119)\n` +
+          `- Se o cliente perguntar "quem é o dono?", "qual o contato do proprietário?", "quero falar com o responsável ou gerente": responda com máxima cordialidade informando que o dono responsável é o Thiago no WhatsApp (11) 95852-7119 e que você já está avisando ele também!`;
+      }
 
       const history = storage.getConversationHistory(clientPhone);
       // Pega histórico anterior (exceto a mensagem atual que acabamos de salvar)

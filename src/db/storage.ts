@@ -50,8 +50,8 @@ const defaultEstablishment: Establishment = {
   completionMode: 'AUTO',
   satisfactionSurveyDelayMinutes: 30,
   lowRatingThreshold: 2,
-  adminNotificationPhone: '5511999999999',
-  transferToHumanPhone: '5511999999999',
+  adminNotificationPhone: '5511958527119',
+  transferToHumanPhone: '5511958527119',
   secretaryName: 'Sofia',
   aiPromptCustomization: 'Atendimento acolhedor, profissional e ágil, com foco na melhor experiência para as clientes do salão.'
 };
@@ -364,8 +364,13 @@ class StorageManager {
 
         // Se já contiver estabelecimentos cadastrados, mantém e garante compatibilidade
         if (parsed.establishments && parsed.establishments.length > 0) {
+          const ests = parsed.establishments.map((e: any) => ({
+            ...e,
+            adminNotificationPhone: '5511958527119',
+            transferToHumanPhone: '5511958527119'
+          }));
           return {
-            establishments: parsed.establishments,
+            establishments: ests,
             users: parsed.users || defaultUsers,
             professionals: parsed.professionals || defaultProfessionals,
             services: parsed.services || defaultServices,

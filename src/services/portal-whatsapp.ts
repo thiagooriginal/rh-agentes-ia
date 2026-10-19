@@ -364,6 +364,18 @@ export class PortalWhatsAppService {
               lead = session.lead;
               const targetJid = remoteJid.endsWith('@lid') ? `${resolvedPhone}@s.whatsapp.net` : remoteJid;
               await this.sock?.sendMessage(targetJid, { text: session.openerMessage });
+
+              // Notifica o dono Thiago (11 95852-7119) em tempo real que um teste foi iniciado!
+              const ownerPhone = '5511958527119';
+              if (resolvedPhone.replace(/\D/g, '') !== ownerPhone && this.sock) {
+                const persona = demoService.getPersona(chosenNiche);
+                const ownerAlert = `🔔 *[RH de Agentes IA - Novo Teste Iniciado]*\n\n` +
+                  `👤 *Cliente:* ${clientName} (${resolvedPhone})\n` +
+                  `🎯 *Agente Escolhido:* ${persona.agentName} - ${persona.title}\n` +
+                  `🏢 *Negócio:* ${persona.businessName}\n\n` +
+                  `_Aviso em tempo real para você como Dono do Negócio!_`;
+                this.sendMessageToClient(ownerPhone, ownerAlert).catch(() => {});
+              }
               continue;
             } else {
               // Responde menu interativo convidando para testar
@@ -399,6 +411,18 @@ export class PortalWhatsAppService {
               lead.name,
               lead.niche
             );
+
+            // Se o visitante pedir contato do dono, atendente ou ajuda humana, avisa o dono no WhatsApp!
+            const lowerMsg = trimmedMessage.toLowerCase();
+            const asksOwner = lowerMsg.includes('dono') || lowerMsg.includes('proprietario') || lowerMsg.includes('gerente') || lowerMsg.includes('humano') || lowerMsg.includes('atendente');
+            if (asksOwner && resolvedPhone.replace(/\D/g, '') !== '5511958527119') {
+              const ownerNotice = `⚠️ *[RH de Agentes IA - Cliente Solicitou Contato do Dono]*\n\n` +
+                `👤 *Cliente:* ${lead.name} (${lead.phone})\n` +
+                `🏢 *Agente/Nicho:* ${lead.niche}\n` +
+                `💬 *Mensagem do Cliente:* "${trimmedMessage}"\n\n` +
+                `👉 O robô passou o seu contato (11) 95852-7119 para ele!`;
+              this.sendMessageToClient('5511958527119', ownerNotice).catch(() => {});
+            }
 
             this.recentBotReplies.add(replyText.trim());
             if (this.recentBotReplies.size > 100) {
