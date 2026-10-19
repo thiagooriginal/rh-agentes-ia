@@ -14,6 +14,7 @@ import { storage } from '../db/storage.js';
 import { WhatsAppState } from '../types.js';
 import fs from 'fs';
 import { geocodingService } from './geocoding.js';
+import { demoService } from './demo.js';
 
 // Desembrulha mensagens de estruturas como deviceSentMessage, ephemeralMessage, viewOnceMessage, editedMessage
 function unwrapMessage(m: any): any {
@@ -400,6 +401,45 @@ export class WhatsAppService {
           if (storage.isHumanInterventionActive(effectivePhone)) {
             console.log(`[WhatsApp Salão] Conversa com ${effectivePhone} sob intervenção humana.`);
             storage.saveConversationMessage(effectivePhone, 'user', trimmedMessage);
+            continue;
+          }
+
+          // 4. Verifica se há sessão de demonstração ativa da vitrine para este telefone
+          let demoLead = demoService.getActiveLead(effectivePhone);
+          if (!demoLead && cleanClientPhone !== effectivePhone) {
+            demoLead = demoService.getActiveLead(cleanClientPhone);
+          }
+
+          if (demoLead) {
+            console.log(`[WhatsApp Salão -> Demo Lead] Lead ativo de demonstração detectado: ${demoLead.name} (${demoLead.niche}). Roteando para persona especialista...`);
+            try {
+              if (this.sock) {
+                await this.sock.presenceSubscribe(remoteJid);
+                await this.sock.sendPresenceUpdate('composing', remoteJid);
+              }
+              demoService.recordInteraction(cleanClientPhone);
+              const demoReply = await aiService.processDemoMessage(
+                demoLead.phone,
+                trimmedMessage,
+                demoLead.name,
+                demoLead.niche
+              );
+
+              this.recentBotReplies.add(demoReply.trim());
+              if (this.sock) {
+                await this.sock.sendPresenceUpdate('paused', remoteJid);
+                const targetJid = remoteJid.endsWith('@lid') ? `${effectivePhone}@s.whatsapp.net` : remoteJid;
+                const sent = await this.sock.sendMessage(targetJid, { text: demoReply });
+                if (sent?.key?.id) this.sentBotMessageIds.add(sent.key.id);
+                if (isSelf && remoteJid.endsWith('@lid')) {
+                  try {
+                    await this.sock.sendMessage(remoteJid, { text: demoReply });
+                  } catch (e) {}
+                }
+              }
+            } catch (demoErr) {
+              console.error('[WhatsApp Salão -> Demo Lead Erro]:', demoErr);
+            }
             continue;
           }
 

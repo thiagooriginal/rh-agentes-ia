@@ -423,12 +423,20 @@ export function createServer() {
     try {
       const result = await demoService.startDemoSession(name, phone, niche);
       
-      // Envia a mensagem de abertura automaticamente no WhatsApp do lead via LINHA DO PORTAL
-      if (!portalWhatsAppService.isConnected()) {
-        throw new Error('A Linha de WhatsApp do Portal (Linha 2) não está conectada no momento. Por favor, conecte a Linha 2 no topo da página.');
+      // Envia a mensagem de abertura automaticamente no WhatsApp do lead via linha conectada (Linha 2 ou Linha 1)
+      let whatsappSent = false;
+      let portalPhone = '5511958527119';
+
+      if (portalWhatsAppService.isConnected()) {
+        whatsappSent = await portalWhatsAppService.sendMessageToClient(result.lead.phone, result.openerMessage);
+        portalPhone = portalWhatsAppService.getStatus().phoneNumber || portalPhone;
+      } else if (whatsappService.isConnected()) {
+        whatsappSent = await whatsappService.sendMessageToClient(result.lead.phone, result.openerMessage);
+        portalPhone = whatsappService.getStatus().phoneNumber || portalPhone;
+      } else {
+        throw new Error('Nenhuma linha do WhatsApp está conectada no momento. Por favor, acesse /qr e escaneie o QR Code para ativar seu robô.');
       }
 
-      const whatsappSent = await portalWhatsAppService.sendMessageToClient(result.lead.phone, result.openerMessage);
       if (!whatsappSent) {
         throw new Error('Não foi possível disparar a mensagem no WhatsApp. Verifique se o número informado está correto e possui WhatsApp.');
       }
@@ -439,7 +447,7 @@ export function createServer() {
         success: true,
         whatsappSent,
         deliveryNote,
-        portalPhone: portalWhatsAppService.getStatus().phoneNumber || '5511965574389',
+        portalPhone,
         lead: result.lead,
         persona: result.persona,
         openerMessage: result.openerMessage

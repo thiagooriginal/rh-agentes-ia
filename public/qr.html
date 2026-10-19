@@ -44,21 +44,21 @@
 
     <!-- Line Selector Tabs -->
     <div class="grid grid-cols-2 gap-2 p-1 bg-slate-900 rounded-2xl border border-slate-800 mb-6">
-      <button onclick="switchLine('portal')" id="tabPortal" class="py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 bg-purple-600 text-white shadow-lg shadow-purple-600/30">
-        <span>🍕 Linha 2 (Portal IAs)</span>
+      <button onclick="switchLine('salon', true)" id="tabSalon" class="py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 bg-purple-600 text-white shadow-lg shadow-purple-600/30">
+        <span id="tabSalonText">💇‍♀️ Linha 1 (Salão)</span>
       </button>
-      <button onclick="switchLine('salon')" id="tabSalon" class="py-2.5 px-3 rounded-xl text-xs font-medium transition flex items-center justify-center gap-2 text-slate-400 hover:text-white">
-        <span>💇‍♀️ Linha 1 (Salão)</span>
+      <button onclick="switchLine('portal', true)" id="tabPortal" class="py-2.5 px-3 rounded-xl text-xs font-medium transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-white">
+        <span id="tabPortalText">🍕 Linha 2 (Portal IAs)</span>
       </button>
     </div>
 
     <!-- Active Line Badge Info -->
     <div id="lineInfoBanner" class="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 mb-6 flex items-center justify-between text-xs">
       <div class="flex items-center gap-2.5">
-        <span id="lineIcon" class="text-xl">🍕</span>
+        <span id="lineIcon" class="text-xl">💇‍♀️</span>
         <div>
-          <div id="lineTitle" class="font-bold text-white">Portal das IAs (Demonstrações)</div>
-          <div id="lineDesc" class="text-[11px] text-slate-400">Atende Pizzaria, Petshop, Clínicas, etc.</div>
+          <div id="lineTitle" class="font-bold text-white">Salão & Estética (Linha 1)</div>
+          <div id="lineDesc" class="text-[11px] text-slate-400">Recepcionista Sofia e agendamentos no Google Calendar</div>
         </div>
       </div>
       <span id="statusPill" class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1.5">
@@ -122,19 +122,23 @@
         <span>Ir para a Vitrine</span>
       </a>
 
-      <button onclick="forceReconnect()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 transition cursor-pointer">
+      <button id="btnReconnect" onclick="forceReconnect()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 transition cursor-pointer">
         <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-        <span>Gerar Novo QR Code</span>
+        <span id="btnReconnectText">Gerar Novo QR Code</span>
       </button>
     </div>
 
   </div>
 
   <script>
-    let activeLine = 'portal'; // 'portal' (Linha 2) ou 'salon' (Linha 1)
+    let activeLine = 'salon'; // Padrão: Linha 1 (Salão), que já está ativa
+    let userManuallySelected = false;
 
-    function switchLine(line) {
+    function switchLine(line, isManual = false) {
       activeLine = line;
+      if (isManual) {
+        userManuallySelected = true;
+      }
       const tabPortal = document.getElementById('tabPortal');
       const tabSalon = document.getElementById('tabSalon');
       const lineIcon = document.getElementById('lineIcon');
@@ -142,14 +146,14 @@
       const lineDesc = document.getElementById('lineDesc');
 
       if (line === 'portal') {
-        tabPortal.className = 'py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 bg-purple-600 text-white shadow-lg shadow-purple-600/30';
-        tabSalon.className = 'py-2.5 px-3 rounded-xl text-xs font-medium transition flex items-center justify-center gap-2 text-slate-400 hover:text-white';
+        tabPortal.className = 'py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 bg-purple-600 text-white shadow-lg shadow-purple-600/30';
+        tabSalon.className = 'py-2.5 px-3 rounded-xl text-xs font-medium transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-white';
         lineIcon.textContent = '🍕';
         lineTitle.textContent = 'Portal das IAs (Linha 2)';
         lineDesc.textContent = 'Atende Pizzaria Luigi, Petshop Bob, Estética, etc.';
       } else {
-        tabSalon.className = 'py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 bg-purple-600 text-white shadow-lg shadow-purple-600/30';
-        tabPortal.className = 'py-2.5 px-3 rounded-xl text-xs font-medium transition flex items-center justify-center gap-2 text-slate-400 hover:text-white';
+        tabSalon.className = 'py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 bg-purple-600 text-white shadow-lg shadow-purple-600/30';
+        tabPortal.className = 'py-2.5 px-3 rounded-xl text-xs font-medium transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-white';
         lineIcon.textContent = '💇‍♀️';
         lineTitle.textContent = 'Salão & Estética (Linha 1)';
         lineDesc.textContent = 'Recepcionista Sofia e agendamentos no Google Calendar';
@@ -163,6 +167,41 @@
       try {
         const res = await fetch('/api/status');
         const data = await res.json();
+
+        // Atualiza indicadores de status nos botões de aba
+        const tabSalonText = document.getElementById('tabSalonText');
+        const tabPortalText = document.getElementById('tabPortalText');
+
+        if (tabSalonText && data.whatsapp) {
+          if (data.whatsapp.state === 'connected') {
+            tabSalonText.innerHTML = '💇‍♀️ Linha 1 <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full ml-1">Conectado</span>';
+          } else if (data.whatsapp.qrCodeDataUrl) {
+            tabSalonText.innerHTML = '💇‍♀️ Linha 1 <span class="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-full ml-1 animate-pulse">QR Pronto</span>';
+          } else {
+            tabSalonText.textContent = '💇‍♀️ Linha 1 (Salão)';
+          }
+        }
+
+        if (tabPortalText && data.portalWhatsapp) {
+          if (data.portalWhatsapp.state === 'connected') {
+            tabPortalText.innerHTML = '🍕 Linha 2 <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full ml-1">Conectado</span>';
+          } else if (data.portalWhatsapp.qrCodeDataUrl) {
+            tabPortalText.innerHTML = '🍕 Linha 2 <span class="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-full ml-1 animate-pulse">QR Pronto</span>';
+          } else {
+            tabPortalText.textContent = '🍕 Linha 2 (Portal IAs)';
+          }
+        }
+
+        // Auto-seleção inteligente: se o usuário não escolheu manualmente e a aba atual não tem QR code, mas a outra tem, alterna automaticamente!
+        if (!userManuallySelected) {
+          if (activeLine === 'portal' && !data.portalWhatsapp?.qrCodeDataUrl && data.whatsapp?.qrCodeDataUrl) {
+            switchLine('salon', false);
+            return;
+          } else if (activeLine === 'salon' && !data.whatsapp?.qrCodeDataUrl && data.portalWhatsapp?.qrCodeDataUrl) {
+            switchLine('portal', false);
+            return;
+          }
+        }
 
         const currentStatus = activeLine === 'portal' ? data.portalWhatsapp : data.whatsapp;
 
@@ -207,15 +246,21 @@
 
     async function forceReconnect() {
       const endpoint = activeLine === 'portal' ? '/api/portal/whatsapp/connect' : '/api/whatsapp/connect';
+      const btn = document.getElementById('btnReconnectText');
+      if (btn) btn.textContent = 'Reconectando...';
       try {
         await fetch(endpoint, { method: 'POST' });
-        checkStatus();
+        setTimeout(checkStatus, 1500);
       } catch (e) {
         alert('Erro ao reiniciar conexão.');
+      } finally {
+        setTimeout(() => {
+          if (btn) btn.textContent = 'Gerar Novo QR Code';
+        }, 3000);
       }
     }
 
-    // Polling a cada 2 segundos
+    // Inicialização e Polling a cada 2 segundos
     checkStatus();
     setInterval(checkStatus, 2000);
     lucide.createIcons();
