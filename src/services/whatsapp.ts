@@ -76,9 +76,10 @@ export class WhatsAppService {
           if (!this.hasPrintedTerminalQR) {
             console.log('\n=========================================');
             console.log('  📲 ESCANEIE O QR CODE NO SEU WHATSAPP');
-            console.log('  (Também disponível em http://localhost:' + config.port + ')');
+            console.log('  🌐 ABRA NO SEU NAVEGADOR EM ALTA RESOLUÇÃO:');
+            console.log('  👉 /qr (Ex: http://SEU_IP:PORTA/qr)');
             console.log('=========================================\n');
-            qrcodeTerminal.generate(qr, { small: true });
+            qrcodeTerminal.generate(qr, { small: false });
             this.hasPrintedTerminalQR = true;
           }
 

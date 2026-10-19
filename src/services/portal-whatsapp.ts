@@ -79,9 +79,10 @@ export class PortalWhatsAppService {
             console.log('\n=========================================');
             console.log('  📲 ESCANEIE O QR CODE DO PORTAL DAS IAs');
             console.log('  (RH de Agentes IA - Linha Dedicada 2)');
-            console.log('  (Disponível em http://localhost:' + config.port + '/vitrine.html)');
+            console.log('  🌐 ABRA NO SEU NAVEGADOR EM ALTA RESOLUÇÃO:');
+            console.log('  👉 /qr (Ex: http://SEU_IP:PORTA/qr)');
             console.log('=========================================\n');
-            qrcodeTerminal.generate(qr, { small: true });
+            qrcodeTerminal.generate(qr, { small: false });
             this.hasPrintedTerminalQR = true;
           }
 

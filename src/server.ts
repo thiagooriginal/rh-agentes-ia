@@ -507,5 +507,13 @@ export function createServer() {
     res.json({ success: true, campaign: cmp, message: 'Campanha registrada e disparada com sucesso em segundo plano!' });
   });
 
+  // --- ROTA DEDICADA PARA LEITURA DE QR CODE EM ALTA RESOLUÇÃO ---
+  app.get('/qr', (req, res) => {
+    res.sendFile(path.resolve(process.cwd(), 'public', 'qr.html'));
+  });
+  app.get('/qrcode', (req, res) => {
+    res.sendFile(path.resolve(process.cwd(), 'public', 'qr.html'));
+  });
+
   return app;
 }
