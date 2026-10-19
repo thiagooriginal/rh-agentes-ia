@@ -89,7 +89,7 @@ export class DashboardDemoService {
   public getPublicUrl(): string {
     return (
       process.env.PUBLIC_URL ||
-      'https://parcel-began-moves-now.trycloudflare.com'
+      'http://rh.82.29.153.163.sslip.io'
     );
   }
 

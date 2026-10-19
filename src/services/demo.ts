@@ -15,7 +15,7 @@ export function formatDisplayPhone(rawPhone?: string): string {
 }
 
 export function getDemoDashboardLink(niche: DemoNiche, rawPhone?: string): string {
-  const base = process.env.PUBLIC_URL || 'https://parcel-began-moves-now.trycloudflare.com';
+  const base = process.env.PUBLIC_URL || 'http://rh.82.29.153.163.sslip.io';
   const clean = (rawPhone || '').replace(/\D/g, '');
   return `${base}/painel-demo.html?niche=${niche}${clean ? `&phone=${clean}` : ''}`;
 }
