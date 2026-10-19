@@ -24,7 +24,24 @@ export class GoogleCalendarService {
     try {
       this.calendarId = process.env.GOOGLE_CALENDAR_ID || 'secretariainteligente1@gmail.com';
 
-      // 1. Verifica se existe arquivo de Service Account (google_credentials.json)
+      // 1. Verifica se foi passado o JSON da Service Account direto via variável de ambiente
+      if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY_JSON) {
+        try {
+          const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY_JSON);
+          const auth = new google.auth.GoogleAuth({
+            credentials,
+            scopes: ['https://www.googleapis.com/auth/calendar']
+          });
+          this.calendar = google.calendar({ version: 'v3', auth });
+          this.isConfigured = true;
+          console.log(`[Google Calendar] ✅ Conectado com sucesso via GOOGLE_SERVICE_ACCOUNT_KEY_JSON! Agenda: ${this.calendarId}`);
+          return true;
+        } catch (jsonErr) {
+          console.error('[Google Calendar] Erro ao carregar credenciais de GOOGLE_SERVICE_ACCOUNT_KEY_JSON:', jsonErr);
+        }
+      }
+
+      // 2. Verifica se existe arquivo de Service Account (google_credentials.json)
       const serviceAccountPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_FILE || path.resolve(process.cwd(), 'google_credentials.json');
       if (fs.existsSync(serviceAccountPath)) {
         const auth = new google.auth.GoogleAuth({
