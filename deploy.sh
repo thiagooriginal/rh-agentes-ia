@@ -15,7 +15,7 @@ if ! command -v docker &> /dev/null; then
 fi
 
 # 2. Cria diretórios de persistência se não existirem
-mkdir -p data auth_info_baileys backups
+mkdir -p data auth_info_baileys auth_info_portal backups
 
 # 3. Sobe os containers
 echo "🐳 Construindo e iniciando containers com Docker Compose..."

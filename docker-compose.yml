@@ -9,16 +9,16 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     environment:
       - PORT=3000
       - NODE_ENV=production
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - JWT_SECRET=${JWT_SECRET:-salao_secret_jwt_2026}
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
     volumes:
       - ./data:/app/data
       - ./auth_info_baileys:/app/auth_info_baileys
+      - ./auth_info_portal:/app/auth_info_portal
+      - ./google_credentials.json:/app/google_credentials.json
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/status"]
       interval: 30s

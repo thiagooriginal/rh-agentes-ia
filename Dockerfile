@@ -26,7 +26,7 @@ COPY --from=builder /app/dist ./dist
 COPY public/ ./public/
 
 # Cria pastas para persistência de dados
-RUN mkdir -p /app/data /app/auth_info_baileys
+RUN mkdir -p /app/data /app/auth_info_baileys /app/auth_info_portal
 
 EXPOSE 3000
 
