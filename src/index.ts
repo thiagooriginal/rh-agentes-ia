@@ -18,7 +18,7 @@ async function main() {
 
   // Inicializa servidor Web API & Dashboard
   const app = createServer();
-  app.listen(config.port, () => {
+  app.listen(config.port, '0.0.0.0', () => {
     console.log(`\n🌐 Painel Administrativo disponível em: http://localhost:${config.port}`);
     console.log(`🌐 Vitrine / Portal de IAs: http://localhost:${config.port}/vitrine.html`);
     console.log(`⚙️  Status do Gemini: ${aiService.hasApiKey() ? '✅ Chave configurada' : '⚠️ Chave não informada (adicione no .env ou no Painel Web)'}`);
