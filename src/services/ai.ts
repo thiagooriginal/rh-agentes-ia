@@ -677,9 +677,9 @@ DIRETRIZES GERAIS:
         });
         response = await activeChat.sendMessage({ message: userMessage });
       } catch (errLite: any) {
-        console.warn(`[AI Demo ${niche}] Falha com gemini-3.5-flash-lite (${errLite?.message}), acionando fallback gemini-3.8-flash...`);
+        console.warn(`[AI Demo ${niche}] Falha com gemini-3.5-flash-lite (${errLite?.message}), acionando fallback gemini-3.5-flash...`);
         activeChat = this.genAI.chats.create({
-          model: 'gemini-3.8-flash',
+          model: 'gemini-3.5-flash',
           history: previousTurns,
           config: {
             systemInstruction,
@@ -747,35 +747,19 @@ DIRETRIZES GERAIS:
     if (!this.genAI) this.initClient();
     if (!this.genAI) throw new Error('Gemini API key não configurada.');
 
-    const cleanMime = (mimeType || 'audio/ogg').split(';')[0].trim();
+    let cleanMime = (mimeType || 'audio/ogg').split(';')[0].trim().toLowerCase();
+    if (cleanMime === 'audio/opus') {
+      cleanMime = 'audio/ogg';
+    }
 
-    try {
-      const response = await this.genAI.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              {
-                inlineData: {
-                  mimeType: cleanMime,
-                  data: audioBuffer.toString('base64')
-                }
-              },
-              {
-                text: 'Transcreva todo o áudio falado em português com precisão absoluta. Retorne APENAS a transcrição literal do que foi falado pela pessoa, sem introdução, sem aspas, sem explicações.'
-              }
-            ]
-          }
-        ]
-      });
+    const modelsToTry = ['gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.8-flash'];
+    const base64Data = audioBuffer.toString('base64');
 
-      return (response.text || '').trim();
-    } catch (err: any) {
-      console.error('[AI] Erro ao transcrever com gemini-3.8-flash:', err?.message || err);
+    for (const modelName of modelsToTry) {
       try {
-        const fallbackRes = await this.genAI.models.generateContent({
-          model: 'gemini-3.5-flash-lite',
+        console.log(`[AI 🎙️ Transcrição] Tentando transcrever áudio (${audioBuffer.length} bytes, ${cleanMime}) com ${modelName}...`);
+        const response = await this.genAI.models.generateContent({
+          model: modelName,
           contents: [
             {
               role: 'user',
@@ -783,22 +767,32 @@ DIRETRIZES GERAIS:
                 {
                   inlineData: {
                     mimeType: cleanMime,
-                    data: audioBuffer.toString('base64')
+                    data: base64Data
                   }
                 },
                 {
-                  text: 'Transcreva o áudio em português. Retorne apenas o texto falado.'
+                  text: 'Transcreva todo o áudio falado em português do Brasil com precisão absoluta. Retorne APENAS o texto da fala exata da pessoa. Se o áudio contiver apenas ruído, chiado ou for silêncio, responda exatamente [SILÊNCIO]. Não coloque aspas, explicações ou notas adicionais.'
                 }
               ]
             }
           ]
         });
-        return (fallbackRes.text || '').trim();
-      } catch (e2) {
-        console.error('[AI] Fallback de transcrição de áudio também falhou:', e2);
-        return '';
+
+        const rawText = (response.text || '').trim();
+        if (rawText && !rawText.includes('[SILÊNCIO]')) {
+          console.log(`[AI 🎙️ Transcrição Sucesso] Modelo ${modelName} transcreveu: "${rawText}"`);
+          return rawText;
+        } else if (rawText.includes('[SILÊNCIO]')) {
+          console.log(`[AI 🎙️ Transcrição] Áudio inaudível ou silencioso detectado pelo modelo ${modelName}.`);
+          return '';
+        }
+      } catch (err: any) {
+        console.warn(`[AI 🎙️ Aviso] Modelo ${modelName} falhou na transcrição:`, err?.message || err);
       }
     }
+
+    console.error('[AI 🎙️ Erro] Todos os modelos de transcrição falharam.');
+    return '';
   }
 }
 

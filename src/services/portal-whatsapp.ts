@@ -210,18 +210,35 @@ export class PortalWhatsAppService {
                 await this.sock.sendPresenceUpdate('recording', remoteJid);
               }
 
-              const msgToDownload = { ...msg, message: realMsg };
-              const audioBuffer = await downloadMediaMessage(
-                msgToDownload,
-                'buffer',
-                {},
-                {
-                  logger: pino({ level: 'silent' }),
-                  reuploadRequest: (m: any) => this.sock!.updateMediaMessage(m)
+              let audioBuffer: Buffer | null = null;
+              try {
+                audioBuffer = (await downloadMediaMessage(
+                  { ...msg, message: realMsg },
+                  'buffer',
+                  {},
+                  {
+                    logger: pino({ level: 'silent' }),
+                    reuploadRequest: (m: any) => this.sock!.updateMediaMessage(m)
+                  }
+                )) as Buffer;
+              } catch (dlErr1) {
+                try {
+                  audioBuffer = (await downloadMediaMessage(
+                    msg,
+                    'buffer',
+                    {},
+                    {
+                      logger: pino({ level: 'silent' }),
+                      reuploadRequest: (m: any) => this.sock!.updateMediaMessage(m)
+                    }
+                  )) as Buffer;
+                } catch (dlErr2) {
+                  console.error(`[Portal WhatsApp 🎙️ Erro Download]:`, dlErr2);
                 }
-              );
+              }
 
-              if (audioBuffer && Buffer.isBuffer(audioBuffer)) {
+              if (audioBuffer && Buffer.isBuffer(audioBuffer) && audioBuffer.length > 0) {
+                console.log(`[Portal WhatsApp 🎙️ Áudio] Áudio baixado com sucesso (${audioBuffer.length} bytes). Transcrevendo com Gemini...`);
                 const transcription = await aiService.transcribeAudio(
                   audioBuffer,
                   audioMsg.mimetype || 'audio/ogg'
@@ -229,6 +246,8 @@ export class PortalWhatsAppService {
                 if (transcription && transcription.trim().length > 0) {
                   messageText = transcription.trim();
                   console.log(`[Portal WhatsApp 🎙️ Transcrição]: "${messageText}"`);
+                } else {
+                  console.log(`[Portal WhatsApp 🎙️ Áudio] Transcrição vazia ou áudio inaudível.`);
                 }
               }
             } catch (audioErr) {
@@ -268,7 +287,20 @@ export class PortalWhatsAppService {
           }
 
           const trimmedMessage = messageText.trim();
-          if (!trimmedMessage) continue;
+          if (!trimmedMessage) {
+            if (audioMsg) {
+              console.log(`[Portal WhatsApp 🎙️ Fallback] Enviando aviso amigável de áudio inaudível para ${resolvedPhone}...`);
+              const targetJid = remoteJid.endsWith('@lid') ? `${resolvedPhone}@s.whatsapp.net` : remoteJid;
+              const fallbackAudioMsg = '🎙️ Recebi seu áudio, mas não consegui ouvir com total clareza. Você poderia me mandar em texto ou tentar gravar novamente por favor? Estou aqui para te atender! 😊';
+              await this.sock?.sendMessage(targetJid, { text: fallbackAudioMsg });
+              if (isSelf && remoteJid.endsWith('@lid')) {
+                try {
+                  await this.sock?.sendMessage(remoteJid, { text: fallbackAudioMsg });
+                } catch (e) {}
+              }
+            }
+            continue;
+          }
 
           // Comandos de administração na Linha do Portal
           const cmd = trimmedMessage.toLowerCase();
@@ -358,7 +390,26 @@ export class PortalWhatsAppService {
               '7': 'pizzaria'
             };
 
-            const chosenNiche = nicheChoiceMap[trimmedMessage];
+            let chosenNiche: DemoNiche | undefined = nicheChoiceMap[trimmedMessage];
+            if (!chosenNiche) {
+              const lower = trimmedMessage.toLowerCase();
+              if (lower.includes('1') || lower.includes('pet') || lower.includes('bob') || lower.includes('veterin') || lower === 'um') {
+                chosenNiche = 'petshop';
+              } else if (lower.includes('2') || lower.includes('estetica') || lower.includes('estética') || lower.includes('camila') || lower === 'dois') {
+                chosenNiche = 'estetica';
+              } else if (lower.includes('3') || lower.includes('dent') || lower.includes('mariana') || lower.includes('odonto') || lower === 'tres' || lower === 'três') {
+                chosenNiche = 'dentista';
+              } else if (lower.includes('4') || lower.includes('med') || lower.includes('médic') || lower.includes('helena') || lower.includes('consultorio') || lower === 'quatro') {
+                chosenNiche = 'medico';
+              } else if (lower.includes('5') || lower.includes('salao') || lower.includes('salão') || lower.includes('barbearia') || lower.includes('cabelo') || lower.includes('sofia') || lower === 'cinco') {
+                chosenNiche = 'cabeleireiro';
+              } else if (lower.includes('6') || lower.includes('jarvis') || lower.includes('executivo') || lower.includes('finan') || lower === 'seis') {
+                chosenNiche = 'pessoal';
+              } else if (lower.includes('7') || lower.includes('pizza') || lower.includes('luigi') || lower.includes('delivery') || lower === 'sete') {
+                chosenNiche = 'pizzaria';
+              }
+            }
+
             if (chosenNiche) {
               const session = await demoService.startDemoSession(clientName, resolvedPhone, chosenNiche);
               lead = session.lead;

@@ -236,19 +236,35 @@ export class WhatsAppService {
                 await this.sock.sendPresenceUpdate('recording', remoteJid);
               }
 
-              const msgToDownload = { ...msg, message: realMsg };
-              const audioBuffer = await downloadMediaMessage(
-                msgToDownload,
-                'buffer',
-                {},
-                {
-                  logger: pino({ level: 'silent' }),
-                  reuploadRequest: (m: any) => this.sock!.updateMediaMessage(m)
+              let audioBuffer: Buffer | null = null;
+              try {
+                audioBuffer = (await downloadMediaMessage(
+                  { ...msg, message: realMsg },
+                  'buffer',
+                  {},
+                  {
+                    logger: pino({ level: 'silent' }),
+                    reuploadRequest: (m: any) => this.sock!.updateMediaMessage(m)
+                  }
+                )) as Buffer;
+              } catch (dlErr1) {
+                try {
+                  audioBuffer = (await downloadMediaMessage(
+                    msg,
+                    'buffer',
+                    {},
+                    {
+                      logger: pino({ level: 'silent' }),
+                      reuploadRequest: (m: any) => this.sock!.updateMediaMessage(m)
+                    }
+                  )) as Buffer;
+                } catch (dlErr2) {
+                  console.error(`[WhatsApp 🎙️ Erro Download Salão]:`, dlErr2);
                 }
-              );
+              }
 
-              if (audioBuffer && Buffer.isBuffer(audioBuffer)) {
-                console.log(`[WhatsApp 🎙️ Áudio] Áudio baixado (${audioBuffer.length} bytes). Transcrevendo com Gemini...`);
+              if (audioBuffer && Buffer.isBuffer(audioBuffer) && audioBuffer.length > 0) {
+                console.log(`[WhatsApp 🎙️ Áudio] Áudio baixado com sucesso (${audioBuffer.length} bytes). Transcrevendo com Gemini...`);
                 const transcription = await aiService.transcribeAudio(
                   audioBuffer,
                   audioMsg.mimetype || 'audio/ogg'
@@ -258,7 +274,7 @@ export class WhatsAppService {
                   messageText = transcription.trim();
                   console.log(`[WhatsApp 🎙️ Transcrição Concluída]: "${messageText}"`);
                 } else {
-                  console.log(`[WhatsApp 🎙️ Áudio] Não foi possível extrair texto do áudio.`);
+                  console.log(`[WhatsApp 🎙️ Áudio] Não foi possível extrair texto ou áudio silencioso.`);
                 }
               }
             } catch (audioErr) {
@@ -310,9 +326,13 @@ export class WhatsAppService {
           if (!messageText || messageText.trim().length === 0) {
             if (audioMsg) {
               const targetJid = (isSelf || remoteJid.endsWith('@lid')) ? `${effectivePhone}@s.whatsapp.net` : remoteJid;
-              await this.sock?.sendMessage(targetJid, {
-                text: 'Oi! Recebi seu áudio, mas o som ficou um pouquinho baixo ou cortado. Poderia enviar novamente ou digitar aqui? Estou pronta para te atender! 😊💜'
-              });
+              const fallbackAudioMsg = 'Oi! 🎙️ Recebi seu áudio, mas não consegui ouvir com total clareza. Você poderia enviar novamente ou digitar aqui? Estou pronta para te atender! 😊💜';
+              await this.sock?.sendMessage(targetJid, { text: fallbackAudioMsg });
+              if (isSelf && remoteJid.endsWith('@lid')) {
+                try {
+                  await this.sock?.sendMessage(remoteJid, { text: fallbackAudioMsg });
+                } catch (e) {}
+              }
             }
             continue;
           }
