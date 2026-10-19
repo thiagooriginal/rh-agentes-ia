@@ -38,21 +38,12 @@ async function main() {
   // Inicializa worker de tarefas e automações em background
   schedulerService.start(60000);
 
-  // Inicializa Linha 1: WhatsApp do Salão de Beleza
-  console.log('\n⏳ Inicializando WhatsApp do Salão (Linha 1)...');
-  try {
-    await whatsappService.start();
-  } catch (err) {
-    console.error('❌ Erro ao iniciar WhatsApp do Salão:', err);
-  }
-
-  // Inicializa Linha 2: WhatsApp do Portal das IAs (Vitrine)
-  console.log('\n⏳ Inicializando WhatsApp do Portal das IAs (Linha 2)...');
-  try {
-    await portalWhatsAppService.start();
-  } catch (err) {
-    console.error('❌ Erro ao iniciar WhatsApp do Portal das IAs:', err);
-  }
+  // Inicializa Linha 1 e Linha 2 simultaneamente em paralelo
+  console.log('\n⏳ Inicializando Linhas do WhatsApp (Salão e Portal)...');
+  Promise.allSettled([
+    whatsappService.start().catch(err => console.error('❌ Erro ao iniciar WhatsApp do Salão:', err)),
+    portalWhatsAppService.start().catch(err => console.error('❌ Erro ao iniciar WhatsApp do Portal das IAs:', err))
+  ]);
 }
 
 main().catch(console.error);

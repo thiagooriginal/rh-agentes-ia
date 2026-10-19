@@ -13,6 +13,7 @@ import { aiService } from './ai.js';
 import { storage } from '../db/storage.js';
 import { demoService, NICHE_PERSONAS } from './demo.js';
 import { DemoNiche, WhatsAppState } from '../types.js';
+import fs from 'fs';
 import { geocodingService } from './geocoding.js';
 import { dashboardDemoService } from './dashboard-demo.js';
 
@@ -118,7 +119,7 @@ export class PortalWhatsAppService {
 
         if (connection === 'close') {
           const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
-          const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+          const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401;
 
           console.log(`[Portal WhatsApp] Sessão desconectada (código ${statusCode}). Reconectar: ${shouldReconnect}`);
 
@@ -131,6 +132,14 @@ export class PortalWhatsAppService {
 
           if (shouldReconnect) {
             setTimeout(() => this.start(), 5000);
+          } else {
+            console.log(`[Portal WhatsApp] Sessão encerrada ou deslogada. Limpando credenciais antigas para gerar novo QR...`);
+            try {
+              if (fs.existsSync(config.portalAuthInfoPath)) {
+                fs.rmSync(config.portalAuthInfoPath, { recursive: true, force: true });
+              }
+            } catch (errClean) {}
+            setTimeout(() => this.start(), 2000);
           }
         }
       });
@@ -603,6 +612,11 @@ export class PortalWhatsAppService {
       } catch (e) {}
       this.sock = null;
     }
+    try {
+      if (fs.existsSync(config.portalAuthInfoPath)) {
+        fs.rmSync(config.portalAuthInfoPath, { recursive: true, force: true });
+      }
+    } catch (e) {}
     this.state = {
       state: 'disconnected',
       lastUpdated: new Date().toISOString()

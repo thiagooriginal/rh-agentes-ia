@@ -12,6 +12,7 @@ import { config } from '../config.js';
 import { aiService } from './ai.js';
 import { storage } from '../db/storage.js';
 import { WhatsAppState } from '../types.js';
+import fs from 'fs';
 import { geocodingService } from './geocoding.js';
 
 // Desembrulha mensagens de estruturas como deviceSentMessage, ephemeralMessage, viewOnceMessage, editedMessage
@@ -113,9 +114,9 @@ export class WhatsAppService {
 
         if (connection === 'close') {
           const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
-          const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+          const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401;
 
-          console.log(`[WhatsApp] Sessão desconectada (código ${statusCode}). Reconectar: ${shouldReconnect}`);
+          console.log(`[WhatsApp Salão] Sessão desconectada (código ${statusCode}). Reconectar: ${shouldReconnect}`);
 
           this.state = {
             state: 'disconnected',
@@ -126,6 +127,14 @@ export class WhatsAppService {
 
           if (shouldReconnect) {
             setTimeout(() => this.start(), 5000);
+          } else {
+            console.log(`[WhatsApp Salão] Sessão encerrada ou deslogada. Limpando credenciais antigas para gerar novo QR...`);
+            try {
+              if (fs.existsSync(config.authInfoPath)) {
+                fs.rmSync(config.authInfoPath, { recursive: true, force: true });
+              }
+            } catch (errClean) {}
+            setTimeout(() => this.start(), 2000);
           }
         }
       });
