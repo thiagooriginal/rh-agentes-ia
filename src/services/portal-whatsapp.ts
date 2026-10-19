@@ -49,7 +49,14 @@ export class PortalWhatsAppService {
   }
 
   public async start(): Promise<void> {
-    if (this.isConnecting) return;
+    if (this.state.state === 'connected') {
+      console.log('[Portal WhatsApp] Já conectado.');
+      return;
+    }
+    if (this.isConnecting && this.state.state === 'connecting') {
+      console.log('[Portal WhatsApp] Conexão já em andamento...');
+      return;
+    }
     this.isConnecting = true;
 
     try {

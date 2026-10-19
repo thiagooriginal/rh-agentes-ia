@@ -47,7 +47,14 @@ export class WhatsAppService {
   }
 
   public async start(): Promise<void> {
-    if (this.isConnecting) return;
+    if (this.state.state === 'connected') {
+      console.log('[WhatsApp Salão] Já conectado.');
+      return;
+    }
+    if (this.isConnecting && this.state.state === 'connecting') {
+      console.log('[WhatsApp Salão] Conexão já em andamento...');
+      return;
+    }
     this.isConnecting = true;
 
     try {
