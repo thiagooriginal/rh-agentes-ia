@@ -19,10 +19,20 @@ async function main() {
   // Inicializa servidor Web API & Dashboard
   const app = createServer();
   app.listen(config.port, '0.0.0.0', () => {
-    console.log(`\n🌐 Painel Administrativo disponível em: http://localhost:${config.port}`);
-    console.log(`🌐 Vitrine / Portal de IAs: http://localhost:${config.port}/vitrine.html`);
+    console.log(`\n🌐 Painel Administrativo disponível em: http://0.0.0.0:${config.port}`);
+    console.log(`🌐 Vitrine / Portal de IAs: http://0.0.0.0:${config.port}/vitrine.html`);
     console.log(`⚙️  Status do Gemini: ${aiService.hasApiKey() ? '✅ Chave configurada' : '⚠️ Chave não informada (adicione no .env ou no Painel Web)'}`);
   });
+
+  if (config.port !== 80) {
+    try {
+      app.listen(80, '0.0.0.0', () => {
+        console.log(`🌐 Também escutando na porta 80 interna`);
+      });
+    } catch (e) {
+      // Porta 80 já em uso ou restrita, prossegue normalmente
+    }
+  }
 
   // Inicializa worker de tarefas e automações em background
   schedulerService.start(60000);
