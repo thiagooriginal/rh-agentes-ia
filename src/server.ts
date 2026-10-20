@@ -131,8 +131,28 @@ export function createServer() {
 
   app.post('/api/whatsapp/disconnect', async (req, res) => {
     try {
-      await whatsappService.disconnect();
+      await whatsappService.disconnect(true);
       res.json({ success: true, message: 'Sessão do Salão desconectada com sucesso' });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.post('/api/whatsapp/reset', async (req, res) => {
+    try {
+      await whatsappService.resetSession();
+      res.json({ success: true, message: 'Sessão reiniciada com sucesso. Novo QR code gerado!' });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.post('/api/whatsapp/pairing-code', async (req, res) => {
+    try {
+      const { phone } = req.body;
+      if (!phone) return res.status(400).json({ success: false, error: 'Telefone é obrigatório.' });
+      const code = await whatsappService.requestPairingCode(phone);
+      res.json({ success: true, code });
     } catch (e: any) {
       res.status(500).json({ success: false, error: e.message });
     }
@@ -154,8 +174,28 @@ export function createServer() {
 
   app.post('/api/portal/whatsapp/disconnect', async (req, res) => {
     try {
-      await portalWhatsAppService.disconnect();
+      await portalWhatsAppService.disconnect(true);
       res.json({ success: true, message: 'Sessão do Portal das IAs desconectada com sucesso' });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.post('/api/portal/whatsapp/reset', async (req, res) => {
+    try {
+      await portalWhatsAppService.resetSession();
+      res.json({ success: true, message: 'Sessão do portal reiniciada com sucesso. Novo QR code gerado!' });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.post('/api/portal/whatsapp/pairing-code', async (req, res) => {
+    try {
+      const { phone } = req.body;
+      if (!phone) return res.status(400).json({ success: false, error: 'Telefone é obrigatório.' });
+      const code = await portalWhatsAppService.requestPairingCode(phone);
+      res.json({ success: true, code });
     } catch (e: any) {
       res.status(500).json({ success: false, error: e.message });
     }

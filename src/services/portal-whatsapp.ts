@@ -3,6 +3,7 @@ import makeWASocket, {
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
   downloadMediaMessage,
+  Browsers,
   WASocket
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
@@ -74,7 +75,11 @@ export class PortalWhatsAppService {
         logger,
         auth: state,
         printQRInTerminal: false,
-        browser: ['RH de Agentes IA', 'Chrome', '1.0.0']
+        browser: Browsers.ubuntu('Chrome'),
+        connectTimeoutMs: 60000,
+        defaultQueryTimeoutMs: 60000,
+        keepAliveIntervalMs: 30000,
+        retryRequestDelayMs: 250
       });
 
       this.sock.ev.on('creds.update', saveCreds);
@@ -616,23 +621,63 @@ export class PortalWhatsAppService {
     }
   }
 
-  public async disconnect(): Promise<void> {
+  public async disconnect(wipeData: boolean = true): Promise<void> {
     if (this.sock) {
       try {
         await this.sock.logout();
-      } catch (e) {}
+      } catch (e) {
+        try {
+          this.sock.end(undefined);
+        } catch (e2) {}
+      }
       this.sock = null;
     }
-    try {
-      if (fs.existsSync(config.portalAuthInfoPath)) {
-        fs.rmSync(config.portalAuthInfoPath, { recursive: true, force: true });
-      }
-    } catch (e) {}
+    if (wipeData) {
+      try {
+        if (fs.existsSync(config.portalAuthInfoPath)) {
+          fs.rmSync(config.portalAuthInfoPath, { recursive: true, force: true });
+        }
+      } catch (e) {}
+    }
     this.state = {
       state: 'disconnected',
       lastUpdated: new Date().toISOString()
     };
     this.isConnecting = false;
+    this.hasPrintedTerminalQR = false;
+  }
+
+  public async resetSession(): Promise<void> {
+    console.log('[Portal WhatsApp] 🔄 Resetando sessão do portal completamente (limpeza de chaves)...');
+    await this.disconnect(true);
+    await new Promise(r => setTimeout(r, 1000));
+    await this.start();
+  }
+
+  public async requestPairingCode(phone: string): Promise<string> {
+    const clean = phone.replace(/\D/g, '');
+    if (!clean || clean.length < 10) {
+      throw new Error('Número de telefone inválido. Informe DDD + número (ex: 11958527119).');
+    }
+
+    if (!this.sock) {
+      await this.disconnect(true);
+      await this.start();
+      await new Promise(r => setTimeout(r, 2000));
+    }
+
+    if (!this.sock) {
+      throw new Error('Não foi possível conectar com o servidor do WhatsApp.');
+    }
+
+    try {
+      const code = await this.sock.requestPairingCode(clean);
+      console.log(`[Portal WhatsApp] 🔑 Código de pareamento gerado para ${clean}: ${code}`);
+      return code;
+    } catch (err: any) {
+      console.error(`[Portal WhatsApp] Erro ao gerar código de pareamento:`, err);
+      throw err;
+    }
   }
 }
 
