@@ -12,6 +12,7 @@ import { googleCalendar } from './services/calendar.js';
 import { campaignService } from './services/campaign.js';
 import { demoService } from './services/demo.js';
 import { dashboardDemoService } from './services/dashboard-demo.js';
+import { evolutionService } from './services/evolution.js';
 import { DemoNiche } from './types.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'salao-beauty-secret-token-2026';
@@ -158,13 +159,21 @@ export function createServer() {
     }
   });
 
-  // --- WHATSAPP PORTAL DAS IAS (LINHA 2 DEDICADA) ---
-  app.get('/api/portal/whatsapp/status', (req, res) => {
+  // --- WHATSAPP PORTAL DAS IAS (LINHA 2 DEDICADA - BAILEYS OU EVOLUTION API) ---
+  app.get('/api/portal/whatsapp/status', async (req, res) => {
+    if (evolutionService.isConfigured()) {
+      const evoStatus = await evolutionService.getStatus();
+      return res.json(evoStatus);
+    }
     res.json(portalWhatsAppService.getStatus());
   });
 
   app.post('/api/portal/whatsapp/connect', async (req, res) => {
     try {
+      if (evolutionService.isConfigured()) {
+        const qr = await evolutionService.getQRCode();
+        return res.json({ success: true, message: 'Conectando via Evolution API...', qr });
+      }
       await portalWhatsAppService.start();
       res.json({ success: true, message: 'Iniciando conexão com WhatsApp do Portal das IAs...' });
     } catch (e: any) {
@@ -174,6 +183,10 @@ export function createServer() {
 
   app.post('/api/portal/whatsapp/disconnect', async (req, res) => {
     try {
+      if (evolutionService.isConfigured()) {
+        await evolutionService.disconnect();
+        return res.json({ success: true, message: 'Sessão Evolution API desconectada' });
+      }
       await portalWhatsAppService.disconnect(true);
       res.json({ success: true, message: 'Sessão do Portal das IAs desconectada com sucesso' });
     } catch (e: any) {
@@ -183,6 +196,11 @@ export function createServer() {
 
   app.post('/api/portal/whatsapp/reset', async (req, res) => {
     try {
+      if (evolutionService.isConfigured()) {
+        await evolutionService.disconnect();
+        const qr = await evolutionService.getQRCode();
+        return res.json({ success: true, message: 'Sessão Evolution reiniciada!', qr });
+      }
       await portalWhatsAppService.resetSession();
       res.json({ success: true, message: 'Sessão do portal reiniciada com sucesso. Novo QR code gerado!' });
     } catch (e: any) {
@@ -194,9 +212,24 @@ export function createServer() {
     try {
       const { phone } = req.body;
       if (!phone) return res.status(400).json({ success: false, error: 'Telefone é obrigatório.' });
+      if (evolutionService.isConfigured()) {
+        const code = await evolutionService.requestPairingCode(phone);
+        return res.json({ success: true, code });
+      }
       const code = await portalWhatsAppService.requestPairingCode(phone);
       res.json({ success: true, code });
     } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // --- WEBHOOK RECEPTOR DA EVOLUTION API ---
+  app.post('/api/evolution/webhook', async (req, res) => {
+    try {
+      await evolutionService.handleWebhook(req.body);
+      res.json({ success: true });
+    } catch (e: any) {
+      console.error('[Evolution Webhook Route Error]:', e);
       res.status(500).json({ success: false, error: e.message });
     }
   });
@@ -446,18 +479,26 @@ export function createServer() {
   });
 
   // --- VITRINE DE SOLUÇÕES & DEMO INTERATIVA AO VIVO ---
-  app.get('/api/demo/niches', (req, res) => {
-    const isLine2Connected = portalWhatsAppService.isConnected();
+  app.get('/api/demo/niches', async (req, res) => {
+    let isEvolutionConnected = false;
+    let evolutionStatus: any = null;
+    if (evolutionService.isConfigured()) {
+      evolutionStatus = await evolutionService.getStatus();
+      isEvolutionConnected = evolutionStatus.state === 'connected';
+    }
+
+    const isLine2Connected = isEvolutionConnected || portalWhatsAppService.isConnected();
     const isLine1Connected = whatsappService.isConnected();
-    const activeService = isLine2Connected ? portalWhatsAppService : (isLine1Connected ? whatsappService : portalWhatsAppService);
-    const activeStatus = activeService.getStatus();
+    const activeService = isEvolutionConnected 
+      ? evolutionStatus 
+      : (portalWhatsAppService.isConnected() ? portalWhatsAppService.getStatus() : (isLine1Connected ? whatsappService.getStatus() : portalWhatsAppService.getStatus()));
 
     res.json({
       niches: demoService.getNiches(),
-      whatsappStatus: isLine2Connected || isLine1Connected ? 'connected' : activeStatus.state,
-      portalWhatsApp: activeStatus,
+      whatsappStatus: isLine2Connected || isLine1Connected ? 'connected' : (activeService.state || 'disconnected'),
+      portalWhatsApp: activeService,
       line1Status: whatsappService.getStatus(),
-      line2Status: portalWhatsAppService.getStatus()
+      line2Status: isEvolutionConnected ? evolutionStatus : portalWhatsAppService.getStatus()
     });
   });
 
@@ -470,18 +511,35 @@ export function createServer() {
     try {
       const result = await demoService.startDemoSession(name, phone, niche);
       
-      // Envia a mensagem de abertura automaticamente no WhatsApp do lead via linha conectada (Linha 2 ou Linha 1)
+      // Envia a mensagem de abertura automaticamente no WhatsApp do lead
       let whatsappSent = false;
       let portalPhone = '5511958527119';
 
-      if (portalWhatsAppService.isConnected()) {
+      // 1. Tenta enviar pela Evolution API (Linha 2 dedicada via Evolution)
+      if (evolutionService.isConfigured()) {
+        try {
+          const evoStatus = await evolutionService.getStatus();
+          if (evoStatus.state === 'connected') {
+            whatsappSent = await evolutionService.sendMessage(result.lead.phone, result.openerMessage);
+            portalPhone = evoStatus.phoneNumber || portalPhone;
+          }
+        } catch (eEvo) {
+          console.error('[Demo Start] Erro ao enviar por Evolution API:', eEvo);
+        }
+      }
+
+      // 2. Se não enviou, tenta pela Linha 2 nativa (Baileys)
+      if (!whatsappSent && portalWhatsAppService.isConnected()) {
         whatsappSent = await portalWhatsAppService.sendMessageToClient(result.lead.phone, result.openerMessage);
         portalPhone = portalWhatsAppService.getStatus().phoneNumber || portalPhone;
-      } else if (whatsappService.isConnected()) {
+      } 
+      // 3. Se não, tenta pela Linha 1 (Salão)
+      else if (!whatsappSent && whatsappService.isConnected()) {
         whatsappSent = await whatsappService.sendMessageToClient(result.lead.phone, result.openerMessage);
         portalPhone = whatsappService.getStatus().phoneNumber || portalPhone;
-      } else {
-        throw new Error('Nenhuma linha do WhatsApp está conectada no momento. Por favor, acesse /qr e escaneie o QR Code para ativar seu robô.');
+      } 
+      else if (!whatsappSent) {
+        throw new Error('Nenhuma linha do WhatsApp está conectada no momento. Por favor, conecte a Evolution API ou escaneie o QR Code.');
       }
 
       if (!whatsappSent) {

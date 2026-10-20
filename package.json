@@ -1,6 +1,6 @@
 {
   "name": "secretaria-virtual",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Secretária Virtual inteligente para WhatsApp integrada com Google Gemini",
   "main": "src/index.ts",
   "scripts": {
