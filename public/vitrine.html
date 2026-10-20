@@ -390,38 +390,120 @@
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
 
-      <div class="flex items-center justify-center gap-2 mb-2">
-        <span class="w-3 h-3 rounded-full bg-emerald-400"></span>
+      <div class="flex items-center justify-center gap-2 mb-1">
+        <span id="vitrineStatusDot" class="w-3 h-3 rounded-full bg-amber-400"></span>
         <h3 class="text-lg font-bold text-white">Linha 2: WhatsApp do Portal</h3>
       </div>
-      <p class="text-xs text-slate-400 mb-6">Escaneie com o aparelho ou número dedicado aos testes de IA.</p>
+      <p id="vitrineModalSubtitle" class="text-xs text-slate-400 mb-4">Conecte o WhatsApp dedicado para as demonstrações dos agentes.</p>
 
-      <div id="vitrineQrBox" class="w-60 h-60 mx-auto bg-slate-950 rounded-2xl border border-slate-800 flex items-center justify-center p-4 mb-4 relative overflow-hidden shadow-inner">
-        <div id="vitrineQrLoading" class="text-center text-slate-500">
-          <i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto mb-2 text-emerald-400"></i>
-          <p class="text-xs">Aguardando QR Code...</p>
-        </div>
-        <img id="vitrineQrImg" src="" alt="QR Code WhatsApp Portal" class="w-full h-full object-contain hidden" />
-        <div id="vitrineQrOk" class="hidden text-center text-emerald-400">
-          <i data-lucide="check-circle" class="w-12 h-12 mx-auto mb-2"></i>
-          <p class="font-bold text-sm">Linha do Portal Conectada!</p>
-          <p id="vitrineQrPhone" class="text-xs text-slate-400 mt-1"></p>
-        </div>
-      </div>
-
-      <div class="flex justify-center gap-3">
-        <button onclick="reconnectVitrineWA()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition shadow">
-          <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-          <span>Reconectar</span>
+      <!-- Selector de Modo: QR Code ou Código de 8 Dígitos -->
+      <div class="flex items-center p-1 bg-slate-950/80 border border-slate-800 rounded-xl mb-4 text-xs font-semibold">
+        <button id="btnVitrineTabQr" onclick="switchVitrineMode('qr')" class="flex-1 py-2 px-3 rounded-lg transition flex items-center justify-center gap-1.5 bg-slate-800 text-purple-400 shadow">
+          <i data-lucide="qr-code" class="w-4 h-4"></i>
+          <span>QR Code</span>
         </button>
-        <button onclick="disconnectVitrineWA()" class="px-4 py-2 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border border-rose-500/30 rounded-xl text-xs font-semibold flex items-center gap-2 transition">
-          <i data-lucide="log-out" class="w-4 h-4"></i>
-          <span>Desconectar</span>
+        <button id="btnVitrineTabCode" onclick="switchVitrineMode('code')" class="flex-1 py-2 px-3 rounded-lg transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-white">
+          <i data-lucide="smartphone" class="w-4 h-4"></i>
+          <span>Conectar pelo Número</span>
         </button>
       </div>
 
-      <div class="mt-4 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 text-[11px] text-slate-400 text-left">
-        📱 No WhatsApp: acesse <strong>Aparelhos Conectados > Conectar um aparelho</strong> e aponte para o código.
+      <!-- PAINEL 1: QR CODE -->
+      <div id="vitrineTabContentQr">
+        <div id="vitrineQrBox" class="w-60 h-60 mx-auto bg-slate-950 rounded-2xl border border-slate-800 flex items-center justify-center p-4 mb-4 relative overflow-hidden shadow-inner">
+          <div id="vitrineQrLoading" class="text-center text-slate-500">
+            <i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto mb-2 text-purple-400"></i>
+            <p id="vitrineLoadingText" class="text-xs">Aguardando QR Code...</p>
+          </div>
+          <img id="vitrineQrImg" src="" alt="QR Code WhatsApp Portal" class="w-full h-full object-contain hidden" />
+          <div id="vitrineQrOk" class="hidden text-center text-emerald-400">
+            <i data-lucide="check-circle" class="w-12 h-12 mx-auto mb-2"></i>
+            <p class="font-bold text-sm">Linha do Portal Conectada!</p>
+            <p id="vitrineQrPhone" class="text-xs text-slate-400 mt-1"></p>
+          </div>
+        </div>
+
+        <div class="flex justify-center gap-2">
+          <button onclick="resetVitrineWA()" title="Forçar novo QR Code" class="px-3.5 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition">
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+            <span id="btnVitrineResetText">Novo QR Code</span>
+          </button>
+          <button onclick="reconnectVitrineWA()" class="px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shadow">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span>Reconectar</span>
+          </button>
+          <button onclick="disconnectVitrineWA()" class="px-3.5 py-2 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border border-rose-500/30 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition">
+            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+            <span>Desconectar</span>
+          </button>
+        </div>
+
+        <div class="mt-4 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 text-[11px] text-slate-400 text-left">
+          📱 No WhatsApp: acesse <strong>Aparelhos Conectados &gt; Conectar um aparelho</strong> e aponte a câmera.
+        </div>
+      </div>
+
+      <!-- PAINEL 2: CÓDIGO POR NÚMERO (8 DÍGITOS) -->
+      <div id="vitrineTabContentCode" class="hidden text-left">
+        <div class="bg-slate-950/70 p-4 rounded-2xl border border-slate-800">
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">
+            Telefone do WhatsApp (DDD + Número):
+          </label>
+          <div class="flex gap-2">
+            <input 
+              type="tel" 
+              id="inputPairingPhoneVitrine" 
+              placeholder="Ex: 11958527119"
+              value="11958527119"
+              class="flex-1 px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:border-purple-500"
+            />
+            <button 
+              id="btnRequestCodeVitrine"
+              onclick="requestPairingCodeVitrine()" 
+              class="px-4 py-2.5 rounded-xl font-bold text-xs bg-purple-600 hover:bg-purple-500 text-white transition flex items-center gap-1.5 shadow"
+            >
+              <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+              <span id="btnRequestCodeVitrineText">Gerar Código</span>
+            </button>
+          </div>
+          <p class="text-[10px] text-slate-500 mt-1">Conexão oficial sem câmera, direto pelo código de 8 dígitos.</p>
+        </div>
+
+        <!-- Exibição do Código de 8 Dígitos -->
+        <div id="pairingCodeResultVitrine" class="hidden mt-3 p-4 rounded-2xl bg-purple-950/40 border border-purple-500/40 text-center flex-col items-center">
+          <span class="text-[10px] uppercase font-bold text-purple-300 tracking-wider">Código de Pareamento WhatsApp:</span>
+          <div class="my-2 py-2 px-4 rounded-xl bg-slate-950 border border-purple-500/50 flex items-center justify-between w-full">
+            <span id="displayPairingCodeVitrine" class="text-2xl font-mono font-black text-emerald-400 tracking-widest mx-auto">
+              ---- - ----
+            </span>
+            <button onclick="copyPairingCodeVitrine()" title="Copiar código" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition">
+              <i data-lucide="copy" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <p class="text-[10px] text-slate-400">
+            Digite essas 8 letras/números no seu WhatsApp.
+          </p>
+        </div>
+
+        <!-- Instruções Passo a Passo -->
+        <div class="mt-3 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 text-[11px] text-slate-400 space-y-1">
+          <p class="font-semibold text-slate-300 flex items-center gap-1">
+            <i data-lucide="help-circle" class="w-3.5 h-3.5 text-purple-400"></i>
+            Como conectar pelo número:
+          </p>
+          <p>1. No celular, abra <strong>WhatsApp &gt; Aparelhos Conectados &gt; Conectar um aparelho</strong>.</p>
+          <p>2. Na tela da câmera, toque no rodapé em: <strong>"Conectar com número de telefone"</strong>.</p>
+          <p>3. Digite o código de 8 dígitos gerado acima. Pronto!</p>
+        </div>
+      </div>
+
+      <!-- Rodapé com Link /qr -->
+      <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
+        <a href="/qr" target="_blank" class="text-purple-400 hover:text-purple-300 flex items-center gap-1 font-medium">
+          <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+          <span>Abrir tela cheia (/qr)</span>
+        </a>
+        <span id="vitrineModalStatusText">Verificando status...</span>
       </div>
 
     </div>
@@ -496,13 +578,38 @@
     }
 
     // Modal de Conexão do WhatsApp da Linha 2
-    function openPortalWhatsAppModal() {
+    let activeVitrineMode = 'qr';
+    let lastVitrineAutoConnect = 0;
+
+    function switchVitrineMode(mode) {
+      activeVitrineMode = mode;
+      const btnQr = document.getElementById('btnVitrineTabQr');
+      const btnCode = document.getElementById('btnVitrineTabCode');
+      const contentQr = document.getElementById('vitrineTabContentQr');
+      const contentCode = document.getElementById('vitrineTabContentCode');
+
+      if (mode === 'qr') {
+        btnQr.className = 'flex-1 py-2 px-3 rounded-lg transition flex items-center justify-center gap-1.5 bg-slate-800 text-purple-400 shadow font-bold';
+        btnCode.className = 'flex-1 py-2 px-3 rounded-lg transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-white font-medium';
+        contentQr.classList.remove('hidden');
+        contentCode.classList.add('hidden');
+      } else {
+        btnCode.className = 'flex-1 py-2 px-3 rounded-lg transition flex items-center justify-center gap-1.5 bg-slate-800 text-purple-400 shadow font-bold';
+        btnQr.className = 'flex-1 py-2 px-3 rounded-lg transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-white font-medium';
+        contentCode.classList.remove('hidden');
+        contentQr.classList.add('hidden');
+      }
+      lucide.createIcons();
+    }
+
+    async function openPortalWhatsAppModal() {
       const modal = document.getElementById('portalWhatsAppModal');
       modal.classList.remove('hidden');
       setTimeout(() => modal.classList.remove('opacity-0'), 10);
-      loadPortalWhatsAppStatus();
+      lucide.createIcons();
+      await loadPortalWhatsAppStatus(true);
       if (!portalPollInterval) {
-        portalPollInterval = setInterval(loadPortalWhatsAppStatus, 3000);
+        portalPollInterval = setInterval(() => loadPortalWhatsAppStatus(false), 2500);
       }
     }
 
@@ -516,7 +623,7 @@
       }
     }
 
-    async function loadPortalWhatsAppStatus() {
+    async function loadPortalWhatsAppStatus(autoConnectIfOffline = false) {
       try {
         const res = await fetch('/api/portal/whatsapp/status');
         const data = await res.json();
@@ -525,31 +632,78 @@
         const qrImg = document.getElementById('vitrineQrImg');
         const qrOk = document.getElementById('vitrineQrOk');
         const qrPhone = document.getElementById('vitrineQrPhone');
+        const statusDot = document.getElementById('vitrineStatusDot');
+        const statusText = document.getElementById('vitrineModalStatusText');
+        const loadingText = document.getElementById('vitrineLoadingText');
 
         if (data.state === 'connected') {
+          if (statusDot) statusDot.className = 'w-3 h-3 rounded-full bg-emerald-400';
+          if (statusText) statusText.innerHTML = `<span class="text-emerald-400 font-semibold">🟢 Conectado (+${data.phoneNumber || 'Ativo'})</span>`;
           qrLoading.classList.add('hidden');
           qrImg.classList.add('hidden');
           qrOk.classList.remove('hidden');
           qrPhone.textContent = `Número: +${data.phoneNumber || 'Ativo'}`;
         } else if (data.state === 'qr_ready' && data.qrCodeDataUrl) {
+          if (statusDot) statusDot.className = 'w-3 h-3 rounded-full bg-sky-400 animate-pulse';
+          if (statusText) statusText.innerHTML = `<span class="text-sky-300">🟡 QR Code Pronto para Leitura</span>`;
           qrLoading.classList.add('hidden');
           qrOk.classList.add('hidden');
           qrImg.src = data.qrCodeDataUrl;
           qrImg.classList.remove('hidden');
         } else {
+          if (statusDot) statusDot.className = 'w-3 h-3 rounded-full bg-amber-400 animate-pulse';
+          if (statusText) statusText.innerHTML = `<span class="text-amber-300">Aguardando geração do QR...</span>`;
+          if (loadingText) loadingText.textContent = data.state === 'connecting' ? 'Iniciando WhatsApp...' : 'Aguardando QR Code...';
           qrImg.classList.add('hidden');
           qrOk.classList.add('hidden');
           qrLoading.classList.remove('hidden');
+
+          const now = Date.now();
+          if ((autoConnectIfOffline || data.state === 'disconnected') && now - lastVitrineAutoConnect > 10000) {
+            lastVitrineAutoConnect = now;
+            console.log('[Vitrine] Solicitando conexão automática com WhatsApp Linha 2...');
+            fetch('/api/portal/whatsapp/connect', { method: 'POST' }).catch(() => {});
+          }
         }
+
+        updateWhatsAppBadge(data.state, data);
       } catch (err) {
         console.error('Erro ao buscar status do portal:', err);
+      }
+    }
+
+    async function resetVitrineWA() {
+      const btnResetText = document.getElementById('btnVitrineResetText');
+      if (btnResetText) btnResetText.textContent = 'Gerando...';
+
+      const qrLoading = document.getElementById('vitrineQrLoading');
+      const qrImg = document.getElementById('vitrineQrImg');
+      const loadingText = document.getElementById('vitrineLoadingText');
+
+      if (loadingText) loadingText.textContent = 'Limpando e gerando novo QR...';
+      if (qrImg) qrImg.classList.add('hidden');
+      if (qrLoading) qrLoading.classList.remove('hidden');
+
+      try {
+        const res = await fetch('/api/portal/whatsapp/reset', { method: 'POST' });
+        const data = await res.json();
+        if (!data.success) {
+          alert('Aviso: ' + (data.error || 'Erro ao resetar'));
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setTimeout(() => {
+          if (btnResetText) btnResetText.textContent = 'Novo QR Code';
+          loadPortalWhatsAppStatus(false);
+        }, 1500);
       }
     }
 
     async function reconnectVitrineWA() {
       try {
         await fetch('/api/portal/whatsapp/connect', { method: 'POST' });
-        loadPortalWhatsAppStatus();
+        loadPortalWhatsAppStatus(false);
       } catch (e) {
         alert('Erro ao solicitar reconexão.');
       }
@@ -559,10 +713,56 @@
       if (!confirm('Deseja realmente desconectar o WhatsApp da Linha 2?')) return;
       try {
         await fetch('/api/portal/whatsapp/disconnect', { method: 'POST' });
-        loadPortalWhatsAppStatus();
+        loadPortalWhatsAppStatus(false);
       } catch (e) {
         alert('Erro ao desconectar.');
       }
+    }
+
+    async function requestPairingCodeVitrine() {
+      const input = document.getElementById('inputPairingPhoneVitrine');
+      const phone = input ? input.value.trim() : '';
+      if (!phone) {
+        alert('Por favor, informe seu número de telefone com DDD (ex: 11958527119).');
+        return;
+      }
+
+      const btnText = document.getElementById('btnRequestCodeVitrineText');
+      const resultBox = document.getElementById('pairingCodeResultVitrine');
+      const codeDisplay = document.getElementById('displayPairingCodeVitrine');
+
+      if (btnText) btnText.textContent = 'Gerando Código...';
+
+      try {
+        const res = await fetch('/api/portal/whatsapp/pairing-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone })
+        });
+        const data = await res.json();
+
+        if (data.success && data.code) {
+          resultBox.classList.remove('hidden');
+          resultBox.classList.add('flex');
+          codeDisplay.textContent = data.code;
+          lucide.createIcons();
+        } else {
+          alert('Erro ao gerar código: ' + (data.error || 'Tente novamente'));
+        }
+      } catch (e) {
+        alert('Falha na comunicação com o servidor.');
+      } finally {
+        if (btnText) btnText.textContent = 'Gerar Código';
+      }
+    }
+
+    function copyPairingCodeVitrine() {
+      const codeDisplay = document.getElementById('displayPairingCodeVitrine');
+      if (!codeDisplay) return;
+      const text = codeDisplay.textContent.trim();
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Código copiado: ' + text);
+      });
     }
 
     // Renderiza os cartões dos nichos

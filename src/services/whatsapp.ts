@@ -30,6 +30,26 @@ function unwrapMessage(m: any): any {
   return m;
 }
 
+// Limpa todos os arquivos de uma pasta montada em Docker sem apagar o ponto de montagem (evita erro EBUSY)
+function cleanAuthDir(dirPath: string): void {
+  try {
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true });
+      return;
+    }
+    const files = fs.readdirSync(dirPath);
+    for (const f of files) {
+      const full = path.join(dirPath, f);
+      try {
+        fs.rmSync(full, { recursive: true, force: true });
+      } catch (e) {}
+    }
+    console.log(`[CleanAuth] Conteúdo de ${dirPath} limpo com sucesso.`);
+  } catch (err) {
+    console.error(`[CleanAuth] Erro ao limpar diretório ${dirPath}:`, err);
+  }
+}
+
 export class WhatsAppService {
   private sock: WASocket | null = null;
   private state: WhatsAppState = {
@@ -75,10 +95,10 @@ export class WhatsAppService {
             const parsed = JSON.parse(raw);
             if (!parsed?.me?.id) {
               console.log('[WhatsApp Salão] creds.json não autenticado detectado. Limpando para gerar QR...');
-              fs.rmSync(config.authInfoPath, { recursive: true, force: true });
+              cleanAuthDir(config.authInfoPath);
             }
           } catch (e) {
-            try { fs.rmSync(config.authInfoPath, { recursive: true, force: true }); } catch (e2) {}
+            cleanAuthDir(config.authInfoPath);
           }
         }
       }
@@ -161,11 +181,7 @@ export class WhatsAppService {
           // Se deslogou ou se NUNCA chegou a conectar (falhou no QR ou chaves inválidas), limpa chaves e reinicia limpo
           if (isLoggedOut || !wasEverConnected) {
             console.log(`[WhatsApp Salão] Limpando credenciais antigas para gerar novo QR...`);
-            try {
-              if (fs.existsSync(config.authInfoPath)) {
-                fs.rmSync(config.authInfoPath, { recursive: true, force: true });
-              }
-            } catch (errClean) {}
+            cleanAuthDir(config.authInfoPath);
             setTimeout(() => this.start(), 1500);
           } else {
             setTimeout(() => this.start(), 5000);
@@ -610,11 +626,7 @@ export class WhatsAppService {
       this.sock = null;
     }
     if (wipeData) {
-      try {
-        if (fs.existsSync(config.authInfoPath)) {
-          fs.rmSync(config.authInfoPath, { recursive: true, force: true });
-        }
-      } catch (e) {}
+      cleanAuthDir(config.authInfoPath);
     }
     this.state = {
       state: 'disconnected',
@@ -632,12 +644,15 @@ export class WhatsAppService {
   }
 
   public async requestPairingCode(phone: string): Promise<string> {
-    const clean = phone.replace(/\D/g, '');
+    let clean = phone.replace(/\D/g, '');
     if (!clean || clean.length < 10) {
       throw new Error('Número de telefone inválido. Informe DDD + número (ex: 11958527119).');
     }
+    if ((clean.length === 10 || clean.length === 11) && !clean.startsWith('55')) {
+      clean = '55' + clean;
+    }
 
-    if (!this.sock) {
+    if (!this.sock || (this.sock as any)?.authState?.creds?.registered) {
       await this.disconnect(true);
       await this.start();
       await new Promise(r => setTimeout(r, 2000));
@@ -652,7 +667,19 @@ export class WhatsAppService {
       console.log(`[WhatsApp Salão] 🔑 Código de pareamento gerado para ${clean}: ${code}`);
       return code;
     } catch (err: any) {
-      console.error(`[WhatsApp Salão] Erro ao gerar código de pareamento:`, err);
+      console.error(`[WhatsApp Salão] Erro ao gerar código de pareamento, tentando reiniciar sessão:`, err);
+      try {
+        await this.disconnect(true);
+        await this.start();
+        await new Promise(r => setTimeout(r, 2500));
+        if (this.sock) {
+          const retryCode = await this.sock.requestPairingCode(clean);
+          console.log(`[WhatsApp Salão] 🔑 Código gerado na segunda tentativa para ${clean}: ${retryCode}`);
+          return retryCode;
+        }
+      } catch (retryErr: any) {
+        console.error(`[WhatsApp Salão] Erro na segunda tentativa de pairing code:`, retryErr);
+      }
       throw err;
     }
   }
