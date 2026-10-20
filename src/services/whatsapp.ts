@@ -14,6 +14,7 @@ import { aiService } from './ai.js';
 import { storage } from '../db/storage.js';
 import { WhatsAppState } from '../types.js';
 import fs from 'fs';
+import path from 'path';
 import { geocodingService } from './geocoding.js';
 import { demoService } from './demo.js';
 
@@ -64,6 +65,23 @@ export class WhatsAppService {
         state: 'connecting',
         lastUpdated: new Date().toISOString()
       };
+
+      // Limpeza preventiva de sessão morta
+      if (fs.existsSync(config.authInfoPath)) {
+        const credsPath = path.join(config.authInfoPath, 'creds.json');
+        if (fs.existsSync(credsPath)) {
+          try {
+            const raw = fs.readFileSync(credsPath, 'utf8');
+            const parsed = JSON.parse(raw);
+            if (!parsed?.me?.id) {
+              console.log('[WhatsApp Salão] creds.json não autenticado detectado. Limpando para gerar QR...');
+              fs.rmSync(config.authInfoPath, { recursive: true, force: true });
+            }
+          } catch (e) {
+            try { fs.rmSync(config.authInfoPath, { recursive: true, force: true }); } catch (e2) {}
+          }
+        }
+      }
 
       const { state, saveCreds } = await useMultiFileAuthState(config.authInfoPath);
       const { version } = await fetchLatestBaileysVersion();

@@ -15,6 +15,7 @@ import { storage } from '../db/storage.js';
 import { demoService, NICHE_PERSONAS } from './demo.js';
 import { DemoNiche, WhatsAppState } from '../types.js';
 import fs from 'fs';
+import path from 'path';
 import { geocodingService } from './geocoding.js';
 import { dashboardDemoService } from './dashboard-demo.js';
 
@@ -65,6 +66,23 @@ export class PortalWhatsAppService {
         state: 'connecting',
         lastUpdated: new Date().toISOString()
       };
+
+      // Limpeza preventiva de sessão morta: se não estamos conectados, garante que não há creds corrompidas
+      if (fs.existsSync(config.portalAuthInfoPath)) {
+        const credsPath = path.join(config.portalAuthInfoPath, 'creds.json');
+        if (fs.existsSync(credsPath)) {
+          try {
+            const raw = fs.readFileSync(credsPath, 'utf8');
+            const parsed = JSON.parse(raw);
+            if (!parsed?.me?.id) {
+              console.log('[Portal WhatsApp] creds.json não autenticado detectado. Limpando para forçar geração de QR Code limpo...');
+              fs.rmSync(config.portalAuthInfoPath, { recursive: true, force: true });
+            }
+          } catch (e) {
+            try { fs.rmSync(config.portalAuthInfoPath, { recursive: true, force: true }); } catch (e2) {}
+          }
+        }
+      }
 
       const { state, saveCreds } = await useMultiFileAuthState(config.portalAuthInfoPath);
       const { version } = await fetchLatestBaileysVersion();

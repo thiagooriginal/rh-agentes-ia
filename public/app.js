@@ -156,45 +156,72 @@ async function fetchStatus() {
   }
 }
 
-async function reconnectWA() {
+async function resetWA() {
+  if (!confirm('Deseja limpar chaves residuais e gerar um novo QR Code do zero para a Linha 1 (Salão)?')) return;
   try {
-    await fetch('/api/whatsapp/connect', { method: 'POST' });
-    alert('Tentando reconectar WhatsApp do Salão...');
+    const res = await fetch('/api/whatsapp/reset', { method: 'POST' });
+    const data = await res.json();
+    alert(data.message || 'Sessão do Salão resetada!');
     fetchStatus();
   } catch (e) {
-    alert('Erro ao reconectar Salão.');
+    alert('Erro ao resetar Linha 1.');
   }
 }
 
-async function disconnectWA() {
-  if (!confirm('Deseja realmente desconectar a sessão do Salão (Linha 1)?')) return;
+async function resetPortalWA() {
+  if (!confirm('Deseja limpar chaves residuais e gerar um novo QR Code do zero para a Linha 2 (Portal das IAs)?')) return;
   try {
-    await fetch('/api/whatsapp/disconnect', { method: 'POST' });
-    alert('Sessão do Salão desconectada.');
+    const res = await fetch('/api/portal/whatsapp/reset', { method: 'POST' });
+    const data = await res.json();
+    alert(data.message || 'Sessão do Portal resetada!');
     fetchStatus();
   } catch (e) {
-    alert('Erro ao desconectar Salão.');
+    alert('Erro ao resetar Linha 2.');
   }
 }
 
-async function reconnectPortalWA() {
-  try {
-    await fetch('/api/portal/whatsapp/connect', { method: 'POST' });
-    alert('Tentando reconectar WhatsApp do Portal das IAs...');
-    fetchStatus();
-  } catch (e) {
-    alert('Erro ao reconectar Portal.');
-  }
+function togglePairingBox(line) {
+  const boxId = line === 'portal' ? 'pairingBoxPortal' : 'pairingBoxSalon';
+  const box = document.getElementById(boxId);
+  if (!box) return;
+  box.classList.toggle('hidden');
 }
 
-async function disconnectPortalWA() {
-  if (!confirm('Deseja realmente desconectar a sessão do Portal das IAs (Linha 2)?')) return;
+async function submitPairingCode(line) {
+  const inputId = line === 'portal' ? 'inputPairingPortal' : 'inputPairingSalon';
+  const displayBoxId = line === 'portal' ? 'codeDisplayPortal' : 'codeDisplaySalon';
+  const valId = line === 'portal' ? 'codeValPortal' : 'codeValSalon';
+
+  const input = document.getElementById(inputId);
+  const phone = input ? input.value.trim() : '';
+  if (!phone || phone.length < 10) {
+    alert('Informe o DDD + número do WhatsApp (ex: 11958527119)');
+    return;
+  }
+
+  const endpoint = line === 'portal' ? '/api/portal/whatsapp/pairing-code' : '/api/whatsapp/pairing-code';
+  const displayBox = document.getElementById(displayBoxId);
+  const valEl = document.getElementById(valId);
+
+  if (valEl) valEl.innerText = 'Gerando...';
+  if (displayBox) displayBox.classList.remove('hidden');
+
   try {
-    await fetch('/api/portal/whatsapp/disconnect', { method: 'POST' });
-    alert('Sessão do Portal desconectada.');
-    fetchStatus();
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone })
+    });
+    const data = await res.json();
+    if (data.success && data.code) {
+      if (valEl) valEl.innerText = data.code;
+    } else {
+      alert('Erro: ' + (data.error || 'Não foi possível gerar código'));
+      if (displayBox) displayBox.classList.add('hidden');
+    }
   } catch (e) {
-    alert('Erro ao desconectar Portal.');
+    alert('Falha ao comunicar com o servidor.');
+    if (displayBox) displayBox.classList.add('hidden');
   }
 }
 
