@@ -19,21 +19,16 @@ async function main() {
   // Inicializa servidor Web API & Dashboard
   const app = createServer();
   const primaryPort = config.port || 3000;
-  app.listen(primaryPort, '0.0.0.0', () => {
+  const server = app.listen(primaryPort, '0.0.0.0', () => {
     console.log(`\n🌐 Servidor Web ativo em: http://0.0.0.0:${primaryPort}`);
     console.log(`🌐 Painel Administrativo: http://0.0.0.0:${primaryPort}`);
     console.log(`🌐 Vitrine / Portal de IAs: http://0.0.0.0:${primaryPort}/vitrine.html`);
     console.log(`⚙️  Status do Gemini: ${aiService.hasApiKey() ? '✅ Chave configurada' : '⚠️ Chave não informada (adicione no .env ou no Painel Web)'}`);
   });
 
-  const secondaryPort = primaryPort === 80 ? 3000 : 80;
-  try {
-    app.listen(secondaryPort, '0.0.0.0', () => {
-      console.log(`🌐 Servidor Web espelhado ouvindo também na porta: http://0.0.0.0:${secondaryPort}`);
-    });
-  } catch (e) {
-    // Porta alternativa restrita ou já em uso, prossegue normalmente
-  }
+  server.on('error', (err: any) => {
+    console.error(`[Server] Erro no servidor na porta ${primaryPort}:`, err);
+  });
 
   // Inicializa worker de tarefas e automações em background
   schedulerService.start(60000);
