@@ -195,7 +195,7 @@ async function submitPairingCode(line) {
   const input = document.getElementById(inputId);
   const phone = input ? input.value.trim() : '';
   if (!phone || phone.length < 10) {
-    alert('Informe o DDD + número do WhatsApp (ex: 11958527119)');
+    alert('Informe o DDD + número do WhatsApp (ex: 11999998888)');
     return;
   }
 

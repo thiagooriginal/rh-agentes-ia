@@ -11,7 +11,7 @@ export const config = {
   companyDescription: process.env.COMPANY_DESCRIPTION || 'Salão de beleza completo: Cabelos, Cortes, Manicures e Bronzeamento.',
   workingHours: process.env.WORKING_HOURS || 'Segunda a Sábado das 09:00 às 19:00',
   address: process.env.ADDRESS || 'Rua das Flores, 123 - Jardins, São Paulo - SP',
-  adminPhone: process.env.ADMIN_PHONE || '5511958527119',
+  adminPhone: process.env.ADMIN_PHONE || '',
   allowedPhoneNumbers: (process.env.ALLOWED_PHONE_NUMBERS || '')
     .split(',')
     .map(n => n.trim().replace(/\D/g, ''))

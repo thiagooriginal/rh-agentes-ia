@@ -421,7 +421,7 @@ export class AIService {
         storage.setHumanIntervention(clientPhone, true);
         return {
           sucesso: true,
-          mensagem: `Atendimento transferido com sucesso! O proprietário e responsável geral é o Thiago no WhatsApp (11) 95852-7119. Ele já foi notificado e pode falar diretamente com você a qualquer momento.`
+          mensagem: `Atendimento transferido com sucesso! O responsável pelo estabelecimento já foi notificado e entrará em contato em breve.`
         };
       }
 
@@ -505,9 +505,9 @@ export class AIService {
       const diaSemanaHoje = diasSemana[now.getDay()];
       const horaHoje = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-      const adminPhone = (establishment.adminNotificationPhone || config.adminPhone || '5511958527119').replace(/\D/g, '');
+      const adminPhone = (establishment.adminNotificationPhone || config.adminPhone || '').replace(/\D/g, '');
       const cleanSender = clientPhone.replace(/\D/g, '');
-      const isSenderAdmin = cleanSender === adminPhone || cleanSender.endsWith('958527119') || cleanSender === '5511958527119';
+      const isSenderAdmin = Boolean(adminPhone && (cleanSender === adminPhone || (cleanSender.length >= 8 && cleanSender.endsWith(adminPhone.slice(-8)))));
 
       const adminInstructions = isSenderAdmin ? `
 MODO ADMINISTRADOR (DONO DO SALÃO):
@@ -624,19 +624,11 @@ DIRETRIZES GERAIS:
       const persona = demoService.getPersona(niche);
       let systemInstruction = persona.systemInstruction(clientName, clientPhone);
 
-      // Diretiva mestre do Dono / Proprietário Geral (Thiago - 11 95852-7119)
-      const isOwner = clientPhone.replace(/\D/g, '').endsWith('958527119');
-      if (isOwner) {
-        systemInstruction += `\n\n👑 ATENÇÃO ESPECIAL: Você está conversando diretamente com o THIAGO (${clientPhone}), o PROPRIETÁRIO/DONO deste negócio e da plataforma RH de Agentes IA!\n` +
-          `- Trate-o com deferência e cordialidade como o Dono da empresa.\n` +
-          `- Chame-o de Thiago ou Senhor Thiago.\n` +
-          `- Preste contas, detalhe os atendimentos e permita testes administrativos.`;
-      } else {
-        systemInstruction += `\n\n👑 INFORMAÇÃO DO PROPRIETÁRIO / DONO:\n` +
-          `- Dono / Proprietário Geral Responsável: THIAGO\n` +
-          `- WhatsApp Direto do Dono: (11) 95852-7119 (5511958527119)\n` +
-          `- Se o cliente perguntar "quem é o dono?", "qual o contato do proprietário?", "quero falar com o responsável ou gerente": responda com máxima cordialidade informando que o dono responsável é o Thiago no WhatsApp (11) 95852-7119 e que você já está avisando ele também!`;
-      }
+      // Diretiva de demonstração no nicho do estabelecimento
+      systemInstruction += `\n\n🎯 MODO DEMONSTRAÇÃO AO VIVO (RH DE AGENTES IA):\n` +
+        `- Você está conversando com o visitante ${clientName} (${clientPhone}), demonstrando com excelência o atendimento do nicho "${persona.businessName}".\n` +
+        `- Atue integralmente como o colaborador digital ${persona.agentName}, tirando dúvidas, apresentando serviços e mostrando agilidade e empatia.\n` +
+        `- Se o visitante perguntar sobre o responsável, gerente ou proprietário: explique cordialmente que a gerência foi informada da conversa e que você está à total disposição para ajudá-lo no que precisar!`;
 
       const history = storage.getConversationHistory(clientPhone);
       // Pega histórico anterior (exceto a mensagem atual que acabamos de salvar)

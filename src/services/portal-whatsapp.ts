@@ -477,15 +477,15 @@ export class PortalWhatsAppService {
               const targetJid = remoteJid.endsWith('@lid') ? `${resolvedPhone}@s.whatsapp.net` : remoteJid;
               await this.sock?.sendMessage(targetJid, { text: session.openerMessage });
 
-              // Notifica o dono Thiago (11 95852-7119) em tempo real que um teste foi iniciado!
-              const ownerPhone = '5511958527119';
-              if (resolvedPhone.replace(/\D/g, '') !== ownerPhone && this.sock) {
+              // Notifica o administrador se configurado
+              const ownerPhone = config.adminPhone ? config.adminPhone.replace(/\D/g, '') : '';
+              if (ownerPhone && resolvedPhone.replace(/\D/g, '') !== ownerPhone && this.sock) {
                 const persona = demoService.getPersona(chosenNiche);
                 const ownerAlert = `🔔 *[RH de Agentes IA - Novo Teste Iniciado]*\n\n` +
                   `👤 *Cliente:* ${clientName} (${resolvedPhone})\n` +
                   `🎯 *Agente Escolhido:* ${persona.agentName} - ${persona.title}\n` +
                   `🏢 *Negócio:* ${persona.businessName}\n\n` +
-                  `_Aviso em tempo real para você como Dono do Negócio!_`;
+                  `_Aviso em tempo real para o administrador!_`;
                 this.sendMessageToClient(ownerPhone, ownerAlert).catch(() => {});
               }
               continue;
@@ -524,16 +524,16 @@ export class PortalWhatsAppService {
               lead.niche
             );
 
-            // Se o visitante pedir contato do dono, atendente ou ajuda humana, avisa o dono no WhatsApp!
+            // Se o visitante pedir contato do dono, atendente ou ajuda humana, avisa o responsável se configurado
             const lowerMsg = trimmedMessage.toLowerCase();
             const asksOwner = lowerMsg.includes('dono') || lowerMsg.includes('proprietario') || lowerMsg.includes('gerente') || lowerMsg.includes('humano') || lowerMsg.includes('atendente');
-            if (asksOwner && resolvedPhone.replace(/\D/g, '') !== '5511958527119') {
-              const ownerNotice = `⚠️ *[RH de Agentes IA - Cliente Solicitou Contato do Dono]*\n\n` +
+            const ownerPhone = config.adminPhone ? config.adminPhone.replace(/\D/g, '') : '';
+            if (asksOwner && ownerPhone && resolvedPhone.replace(/\D/g, '') !== ownerPhone) {
+              const ownerNotice = `⚠️ *[RH de Agentes IA - Cliente Solicitou Contato do Responsável]*\n\n` +
                 `👤 *Cliente:* ${lead.name} (${lead.phone})\n` +
                 `🏢 *Agente/Nicho:* ${lead.niche}\n` +
-                `💬 *Mensagem do Cliente:* "${trimmedMessage}"\n\n` +
-                `👉 O robô passou o seu contato (11) 95852-7119 para ele!`;
-              this.sendMessageToClient('5511958527119', ownerNotice).catch(() => {});
+                `💬 *Mensagem do Cliente:* "${trimmedMessage}"`;
+              this.sendMessageToClient(ownerPhone, ownerNotice).catch(() => {});
             }
 
             this.recentBotReplies.add(replyText.trim());
@@ -690,7 +690,7 @@ export class PortalWhatsAppService {
   public async requestPairingCode(phone: string): Promise<string> {
     let clean = phone.replace(/\D/g, '');
     if (!clean || clean.length < 10) {
-      throw new Error('Número de telefone inválido. Informe DDD + número (ex: 11958527119).');
+      throw new Error('Número de telefone inválido. Informe DDD + número (ex: 11999998888).');
     }
     if ((clean.length === 10 || clean.length === 11) && !clean.startsWith('55')) {
       clean = '55' + clean;

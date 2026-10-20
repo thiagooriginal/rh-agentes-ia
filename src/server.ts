@@ -513,15 +513,17 @@ export function createServer() {
       
       // Envia a mensagem de abertura automaticamente no WhatsApp do lead
       let whatsappSent = false;
-      let portalPhone = '5511958527119';
+      let portalPhone = '';
 
       // 1. Tenta enviar pela Evolution API (Linha 2 dedicada via Evolution)
       if (evolutionService.isConfigured()) {
         try {
           const evoStatus = await evolutionService.getStatus();
+          if (evoStatus.phoneNumber) {
+            portalPhone = evoStatus.phoneNumber;
+          }
           if (evoStatus.state === 'connected') {
             whatsappSent = await evolutionService.sendMessage(result.lead.phone, result.openerMessage);
-            portalPhone = evoStatus.phoneNumber || portalPhone;
           }
         } catch (eEvo) {
           console.error('[Demo Start] Erro ao enviar por Evolution API:', eEvo);

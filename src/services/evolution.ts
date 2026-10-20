@@ -46,6 +46,30 @@ export class EvolutionService {
     }
 
     try {
+      // 1. Tenta buscar detalhes completos da instância via fetchInstances
+      try {
+        const urlFetch = `${this.getBaseUrl()}/instance/fetchInstances?instanceName=${this.getInstanceName()}`;
+        const resFetch = await fetch(urlFetch, { headers: this.getHeaders() });
+        if (resFetch.ok) {
+          const list = (await resFetch.json()) as any;
+          const inst = Array.isArray(list) ? list.find((i: any) => i.name === this.getInstanceName()) : undefined;
+          if (inst) {
+            const status = inst.connectionStatus;
+            const phone = inst.ownerJid ? inst.ownerJid.split('@')[0]?.split(':')[0] : undefined;
+            if (status === 'open') {
+              return {
+                state: 'connected',
+                phoneNumber: phone,
+                lastUpdated: new Date().toISOString()
+              };
+            }
+          }
+        }
+      } catch (eFetch) {
+        // Fallback silencioso para connectionState
+      }
+
+      // 2. Consulta connectionState da instância
       const url = `${this.getBaseUrl()}/instance/connectionState/${this.getInstanceName()}`;
       const res = await fetch(url, { headers: this.getHeaders() });
       if (!res.ok) {
@@ -287,6 +311,14 @@ export class EvolutionService {
       // 1. Verifica se há demonstração de lead ativa da Vitrine
       let demoLead = demoService.getActiveLead(cleanPhone);
       if (demoLead) {
+        if (demoService.isLeadLimitReached(demoLead)) {
+          console.log(`[Evolution API] Limite de demonstração atingido para ${demoLead.name} (${demoLead.phone}).`);
+          demoService.completeDemoLead(demoLead.id);
+          const finishMsg = `🌟 *Demonstração ao vivo concluída com sucesso!*\n\nVocê pôde comprovar na prática a velocidade, precisão e o atendimento humanizado do nosso colaborador digital do *RH de Agentes IA*!\n\n🚀 Para contratar e ativar este agente com um número exclusivo no seu negócio, acesse nossa vitrine ou converse com nossa equipe!`;
+          await this.sendMessage(cleanPhone, finishMsg);
+          return;
+        }
+
         console.log(`[Evolution API -> Demo Lead] Lead ativo encontrado: ${demoLead.name} (${demoLead.niche}). Respondendo com IA...`);
         demoService.recordInteraction(cleanPhone);
 

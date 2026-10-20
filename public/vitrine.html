@@ -446,8 +446,8 @@
             <input 
               type="tel" 
               id="inputPairingPhoneVitrine" 
-              placeholder="Ex: 11958527119"
-              value="11958527119"
+              placeholder="Ex: 11999999999"
+              value=""
               class="flex-1 px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:border-purple-500"
             />
             <button 
@@ -717,7 +717,7 @@
       const input = document.getElementById('inputPairingPhoneVitrine');
       const phone = input ? input.value.trim() : '';
       if (!phone) {
-        alert('Por favor, informe seu número de telefone com DDD (ex: 11958527119).');
+        alert('Por favor, informe seu número de telefone com DDD (ex: 11999998888).');
         return;
       }
 

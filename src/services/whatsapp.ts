@@ -250,7 +250,7 @@ export class WhatsAppService {
                          isMatchingPhone(resolvedPhone, botPhone) || 
                          (botLid && (cleanClientPhone === botLid || resolvedPhone === botLid));
 
-          const isOwner = cleanClientPhone.endsWith('958527119') || resolvedPhone.endsWith('958527119');
+          const isOwner = Boolean(adminPhone && (cleanClientPhone === adminPhone || resolvedPhone === adminPhone));
           const isAdminUser = isSelf || isOwner || isMatchingPhone(cleanClientPhone, adminPhone) || isMatchingPhone(resolvedPhone, adminPhone);
 
           // Verifica se há whitelist ativa. Se não houver, QUALQUER NÚMERO pode fazer o teste!
@@ -271,7 +271,7 @@ export class WhatsAppService {
             continue;
           }
 
-          const effectivePhone = isSelf ? (botPhone || '5511958527119') : resolvedPhone;
+          const effectivePhone = isSelf ? (botPhone || resolvedPhone) : resolvedPhone;
           const effectiveName = clientName;
 
           // Extrai áudio se presente (mensagem de voz gravada ou arquivo de áudio)
@@ -646,7 +646,7 @@ export class WhatsAppService {
   public async requestPairingCode(phone: string): Promise<string> {
     let clean = phone.replace(/\D/g, '');
     if (!clean || clean.length < 10) {
-      throw new Error('Número de telefone inválido. Informe DDD + número (ex: 11958527119).');
+      throw new Error('Número de telefone inválido. Informe DDD + número (ex: 11999998888).');
     }
     if ((clean.length === 10 || clean.length === 11) && !clean.startsWith('55')) {
       clean = '55' + clean;
