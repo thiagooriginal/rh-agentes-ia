@@ -526,6 +526,7 @@ export function createServer() {
       let portalPhone = '';
 
       // 1. Tenta enviar pela Evolution API (Linha 2 dedicada via Evolution)
+      let lastSendError = '';
       if (evolutionService.isConfigured()) {
         try {
           const evoStatus = await evolutionService.getStatus();
@@ -535,23 +536,31 @@ export function createServer() {
           if (evoStatus.state === 'connected') {
             whatsappSent = await evolutionService.sendMessage(result.lead.phone, result.openerMessage);
           }
-        } catch (eEvo) {
+        } catch (eEvo: any) {
           console.error('[Demo Start] Erro ao enviar por Evolution API:', eEvo);
+          lastSendError = eEvo?.message || '';
         }
       }
 
       // 2. Se não enviou, tenta pela Linha 2 nativa (Baileys)
       if (!whatsappSent && portalWhatsAppService.isConnected()) {
-        whatsappSent = await portalWhatsAppService.sendMessageToClient(result.lead.phone, result.openerMessage);
-        portalPhone = portalWhatsAppService.getStatus().phoneNumber || portalPhone;
+        try {
+          whatsappSent = await portalWhatsAppService.sendMessageToClient(result.lead.phone, result.openerMessage);
+          portalPhone = portalWhatsAppService.getStatus().phoneNumber || portalPhone;
+        } catch (e) {}
       } 
       // 3. Se não, tenta pela Linha 1 (Salão)
       else if (!whatsappSent && whatsappService.isConnected()) {
-        whatsappSent = await whatsappService.sendMessageToClient(result.lead.phone, result.openerMessage);
-        portalPhone = whatsappService.getStatus().phoneNumber || portalPhone;
+        try {
+          whatsappSent = await whatsappService.sendMessageToClient(result.lead.phone, result.openerMessage);
+          portalPhone = whatsappService.getStatus().phoneNumber || portalPhone;
+        } catch (e) {}
       } 
       else if (!whatsappSent) {
-        throw new Error('Nenhuma linha do WhatsApp está conectada no momento. Por favor, conecte a Evolution API ou escaneie o QR Code.');
+        if (lastSendError && (lastSendError.includes('not a whatsapp') || lastSendError.includes('400'))) {
+          throw new Error(`O número informado (${result.lead.phone}) não foi encontrado no WhatsApp. Por favor, confira o DDD e o número digitado.`);
+        }
+        throw new Error('Não foi possível disparar a mensagem no WhatsApp. Por favor, confira o DDD e o número digitado.');
       }
 
       if (!whatsappSent) {
