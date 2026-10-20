@@ -308,7 +308,15 @@
           }
         }
 
-        // Se a linha ativa for a Linha 2 e estiver desconectada, tenta ativar automaticamente a cada 10s
+        // Se o usuário ainda não escolheu manualmente, e a Linha 1 tiver QR pronto enquanto a 2 não tem, foca na Linha 1
+        if (!userManuallySelected) {
+          if (data.whatsapp?.qrCodeDataUrl && !data.portalWhatsapp?.qrCodeDataUrl && activeLine !== 'salon') {
+            switchLine('salon', false);
+            return;
+          }
+        }
+
+        // Se a linha ativa estiver desconectada, tenta ativar automaticamente a cada 10s
         const currentStatus = activeLine === 'portal' ? data.portalWhatsapp : data.whatsapp;
         if (currentStatus?.state === 'disconnected') {
           const now = Date.now();
@@ -318,8 +326,6 @@
             fetch(endpoint, { method: 'POST' }).catch(() => {});
           }
         }
-
-        const currentStatus = activeLine === 'portal' ? data.portalWhatsapp : data.whatsapp;
 
         const qrLoading = document.getElementById('qrLoading');
         const qrImage = document.getElementById('qrImage');

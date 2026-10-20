@@ -447,10 +447,17 @@ export function createServer() {
 
   // --- VITRINE DE SOLUÇÕES & DEMO INTERATIVA AO VIVO ---
   app.get('/api/demo/niches', (req, res) => {
+    const isLine2Connected = portalWhatsAppService.isConnected();
+    const isLine1Connected = whatsappService.isConnected();
+    const activeService = isLine2Connected ? portalWhatsAppService : (isLine1Connected ? whatsappService : portalWhatsAppService);
+    const activeStatus = activeService.getStatus();
+
     res.json({
       niches: demoService.getNiches(),
-      whatsappStatus: portalWhatsAppService.getStatus().state,
-      portalWhatsApp: portalWhatsAppService.getStatus()
+      whatsappStatus: isLine2Connected || isLine1Connected ? 'connected' : activeStatus.state,
+      portalWhatsApp: activeStatus,
+      line1Status: whatsappService.getStatus(),
+      line2Status: portalWhatsAppService.getStatus()
     });
   });
 
