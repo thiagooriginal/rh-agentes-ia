@@ -133,9 +133,10 @@ export class PortalWhatsAppService {
         if (connection === 'close') {
           const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
           const errMsg = lastDisconnect?.error?.message || (lastDisconnect?.error as any)?.output?.payload?.message || `code_${statusCode}`;
-          const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401;
+          const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403;
+          const wasEverConnected = this.state.state === 'connected' || !!this.sock?.user;
 
-          console.log(`[Portal WhatsApp] Sessão desconectada (código ${statusCode}: ${errMsg}). Reconectar: ${shouldReconnect}`);
+          console.log(`[Portal WhatsApp] Sessão desconectada (código ${statusCode}: ${errMsg}). Reconectar: ${!isLoggedOut}`);
 
           this.state = {
             state: 'disconnected',
@@ -145,16 +146,18 @@ export class PortalWhatsAppService {
           };
           this.isConnecting = false;
 
-          if (shouldReconnect) {
-            setTimeout(() => this.start(), 5000);
-          } else {
-            console.log(`[Portal WhatsApp] Sessão encerrada ou deslogada. Limpando credenciais antigas para gerar novo QR...`);
+          // Se deslogou ou se NUNCA chegou a conectar (falhou no QR ou chaves inválidas), limpa chaves e reinicia limpo
+          if (isLoggedOut || !wasEverConnected) {
+            console.log(`[Portal WhatsApp] Limpando credenciais antigas para gerar novo QR Code limpo...`);
             try {
               if (fs.existsSync(config.portalAuthInfoPath)) {
                 fs.rmSync(config.portalAuthInfoPath, { recursive: true, force: true });
               }
             } catch (errClean) {}
-            setTimeout(() => this.start(), 2000);
+            setTimeout(() => this.start(), 1500);
+          } else {
+            // Foi uma desconexão temporária de rede de sessão já conectada
+            setTimeout(() => this.start(), 5000);
           }
         }
       });

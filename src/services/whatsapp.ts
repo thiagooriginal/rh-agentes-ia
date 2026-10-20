@@ -128,9 +128,10 @@ export class WhatsAppService {
 
         if (connection === 'close') {
           const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
-          const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401;
+          const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403;
+          const wasEverConnected = this.state.state === 'connected' || !!this.sock?.user;
 
-          console.log(`[WhatsApp Salão] Sessão desconectada (código ${statusCode}). Reconectar: ${shouldReconnect}`);
+          console.log(`[WhatsApp Salão] Sessão desconectada (código ${statusCode}). Reconectar: ${!isLoggedOut}`);
 
           this.state = {
             state: 'disconnected',
@@ -139,16 +140,17 @@ export class WhatsAppService {
           };
           this.isConnecting = false;
 
-          if (shouldReconnect) {
-            setTimeout(() => this.start(), 5000);
-          } else {
-            console.log(`[WhatsApp Salão] Sessão encerrada ou deslogada. Limpando credenciais antigas para gerar novo QR...`);
+          // Se deslogou ou se NUNCA chegou a conectar (falhou no QR ou chaves inválidas), limpa chaves e reinicia limpo
+          if (isLoggedOut || !wasEverConnected) {
+            console.log(`[WhatsApp Salão] Limpando credenciais antigas para gerar novo QR...`);
             try {
               if (fs.existsSync(config.authInfoPath)) {
                 fs.rmSync(config.authInfoPath, { recursive: true, force: true });
               }
             } catch (errClean) {}
-            setTimeout(() => this.start(), 2000);
+            setTimeout(() => this.start(), 1500);
+          } else {
+            setTimeout(() => this.start(), 5000);
           }
         }
       });

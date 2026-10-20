@@ -45,21 +45,21 @@
 
     <!-- Line Selector Tabs -->
     <div class="grid grid-cols-2 gap-2 p-1 bg-slate-900 rounded-2xl border border-slate-800 mb-5">
-      <button onclick="switchLine('salon', true)" id="tabSalon" class="py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 bg-purple-600 text-white shadow-lg shadow-purple-600/30">
-        <span id="tabSalonText">💇‍♀️ Linha 1 (Salão)</span>
-      </button>
-      <button onclick="switchLine('portal', true)" id="tabPortal" class="py-2.5 px-3 rounded-xl text-xs font-medium transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-white">
+      <button onclick="switchLine('portal', true)" id="tabPortal" class="py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 bg-purple-600 text-white shadow-lg shadow-purple-600/30">
         <span id="tabPortalText">🍕 Linha 2 (Portal IAs)</span>
+      </button>
+      <button onclick="switchLine('salon', true)" id="tabSalon" class="py-2.5 px-3 rounded-xl text-xs font-medium transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-white">
+        <span id="tabSalonText">💇‍♀️ Linha 1 (Salão)</span>
       </button>
     </div>
 
     <!-- Active Line Info Banner -->
     <div id="lineInfoBanner" class="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 mb-5 flex items-center justify-between text-xs">
       <div class="flex items-center gap-2.5">
-        <span id="lineIcon" class="text-xl">💇‍♀️</span>
+        <span id="lineIcon" class="text-xl">🍕</span>
         <div>
-          <div id="lineTitle" class="font-bold text-white">Salão & Estética (Linha 1)</div>
-          <div id="lineDesc" class="text-[11px] text-slate-400">Recepcionista Sofia & agendamentos automáticos</div>
+          <div id="lineTitle" class="font-bold text-white">Portal das IAs (Linha 2)</div>
+          <div id="lineDesc" class="text-[11px] text-slate-400">Atende Pizzaria Luigi, Petshop Bob, Estética Camila, etc.</div>
         </div>
       </div>
       <span id="statusPill" class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1.5">
@@ -221,9 +221,10 @@
   </div>
 
   <script>
-    let activeLine = 'salon'; // Padrão: Linha 1 (Salão)
+    let activeLine = 'portal'; // Padrão solicitado: Linha 2 (Portal das IAs)
     let userManuallySelected = false;
     let activeMode = 'qr'; // 'qr' ou 'code'
+    let lastAutoConnectAttempt = 0;
 
     function switchMode(mode) {
       activeMode = mode;
@@ -307,14 +308,14 @@
           }
         }
 
-        // Auto-seleção inteligente da linha ativa com QR Code
-        if (!userManuallySelected) {
-          if (activeLine === 'portal' && !data.portalWhatsapp?.qrCodeDataUrl && data.whatsapp?.qrCodeDataUrl) {
-            switchLine('salon', false);
-            return;
-          } else if (activeLine === 'salon' && !data.whatsapp?.qrCodeDataUrl && data.portalWhatsapp?.qrCodeDataUrl) {
-            switchLine('portal', false);
-            return;
+        // Se a linha ativa for a Linha 2 e estiver desconectada, tenta ativar automaticamente a cada 10s
+        const currentStatus = activeLine === 'portal' ? data.portalWhatsapp : data.whatsapp;
+        if (currentStatus?.state === 'disconnected') {
+          const now = Date.now();
+          if (now - lastAutoConnectAttempt > 8000) {
+            lastAutoConnectAttempt = now;
+            const endpoint = activeLine === 'portal' ? '/api/portal/whatsapp/connect' : '/api/whatsapp/connect';
+            fetch(endpoint, { method: 'POST' }).catch(() => {});
           }
         }
 
