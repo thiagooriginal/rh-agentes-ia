@@ -219,6 +219,10 @@ export class EvolutionService {
       }
 
       this.recentBotReplies.add(text.trim());
+      if (this.recentBotReplies.size > 100) {
+        const first = this.recentBotReplies.values().next().value;
+        if (first) this.recentBotReplies.delete(first);
+      }
       console.log(`[Evolution API ✅] Mensagem enviada com sucesso para ${clean}: "${text.slice(0, 50)}..."`);
       return true;
     } catch (err: any) {

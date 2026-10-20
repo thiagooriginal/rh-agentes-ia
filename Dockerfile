@@ -6,7 +6,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
-# Copia código fonte e compila TypeScript
+# Força quebra de cache no Docker
+ARG CACHEBUST=20261020_v105
 COPY tsconfig.json ./
 COPY src/ ./src/
 RUN npm run build

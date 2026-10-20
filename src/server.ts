@@ -64,6 +64,16 @@ export function createServer() {
     res.json({ success: true, token, user: safeUser });
   });
 
+  // --- VERSÃO & BUILD INFO ---
+  app.get('/api/version', (_req, res) => {
+    res.json({
+      name: 'rh-agentes-ia',
+      version: '1.0.5',
+      builtAt: '2026-10-20T21:00:00Z',
+      commit: process.env.GIT_SHA || 'v1.0.5-evolution-release'
+    });
+  });
+
   // --- STATUS & WHATSAPP (SALÃO E PORTAL) ---
   app.get('/api/status', (req, res) => {
     const est = storage.getEstablishment();
