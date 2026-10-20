@@ -19,7 +19,7 @@ ENV NODE_ENV=production
 ENV PORT=3000
 
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # Copia build e arquivos públicos
 COPY --from=builder /app/dist ./dist
@@ -28,6 +28,6 @@ COPY public/ ./public/
 # Cria pastas para persistência de dados
 RUN mkdir -p /app/data /app/auth_info_baileys /app/auth_info_portal
 
-EXPOSE 3000 80
+EXPOSE 3000
 
 CMD ["node", "dist/index.js"]
