@@ -21,7 +21,8 @@ import {
   PersonalTask,
   PersonalNote,
   PersonalReminder,
-  PersonalTransaction
+  PersonalTransaction,
+  PersonalCategory
 } from '../types.js';
 
 const PILOT_ESTABLISHMENT_ID = 'est_pilot_01';
@@ -392,6 +393,7 @@ class StorageManager {
             personalNotes: parsed.personalNotes || [],
             personalReminders: parsed.personalReminders || [],
             personalTransactions: parsed.personalTransactions || [],
+            personalCategories: parsed.personalCategories || [],
             globalAiPaused: parsed.globalAiPaused !== undefined ? parsed.globalAiPaused : true
           };
         }
@@ -420,6 +422,7 @@ class StorageManager {
       personalNotes: [],
       personalReminders: [],
       personalTransactions: [],
+      personalCategories: [],
       globalAiPaused: true
     };
 
@@ -1666,6 +1669,92 @@ class StorageManager {
     const initialLen = this.db.personalReminders.length;
     this.db.personalReminders = this.db.personalReminders.filter(r => r.id !== id);
     if (this.db.personalReminders.length !== initialLen) {
+      this.saveData(this.db);
+      return true;
+    }
+    return false;
+  }
+
+  // --- CATEGORIAS PERSONALIZADAS DO JARVIS ---
+  private getDefaultCategories(): { name: string; type: 'DESPESA' | 'RECEITA' | 'AMBOS'; color: string }[] {
+    return [
+      { name: 'Alimentação', type: 'DESPESA', color: '#f59e0b' },
+      { name: 'Transporte', type: 'DESPESA', color: '#3b82f6' },
+      { name: 'Contas Fixas', type: 'DESPESA', color: '#6366f1' },
+      { name: 'Cartão de Crédito', type: 'DESPESA', color: '#ec4899' },
+      { name: 'Moradia', type: 'DESPESA', color: '#8b5cf6' },
+      { name: 'Lazer', type: 'DESPESA', color: '#f43f5e' },
+      { name: 'Saúde', type: 'DESPESA', color: '#10b981' },
+      { name: 'Trabalho / Negócios', type: 'DESPESA', color: '#06b6d4' },
+      { name: 'Salário / Entradas', type: 'RECEITA', color: '#10b981' },
+      { name: 'Investimentos', type: 'AMBOS', color: '#eab308' },
+      { name: 'Outros', type: 'AMBOS', color: '#64748b' }
+    ];
+  }
+
+  public getPersonalCategories(phone: string): PersonalCategory[] {
+    if (!this.db.personalCategories) this.db.personalCategories = [];
+    const clean = phone.replace(/\D/g, '');
+
+    const userCategories = this.db.personalCategories.filter(c => {
+      return !c.phone || c.phone === clean || (clean.length >= 8 && c.phone.endsWith(clean.slice(-8)));
+    });
+
+    if (userCategories.length > 0) {
+      return userCategories;
+    }
+
+    const defaults: PersonalCategory[] = this.getDefaultCategories().map(d => ({
+      id: `cat_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      phone: clean,
+      name: d.name,
+      type: d.type,
+      color: d.color,
+      createdAt: new Date().toISOString()
+    }));
+
+    this.db.personalCategories.push(...defaults);
+    this.saveData(this.db);
+    return defaults;
+  }
+
+  public addPersonalCategory(data: {
+    phone: string;
+    name: string;
+    type?: 'DESPESA' | 'RECEITA' | 'AMBOS';
+    color?: string;
+    monthlyBudget?: number;
+  }): PersonalCategory {
+    if (!this.db.personalCategories) this.db.personalCategories = [];
+    const cleanPhone = data.phone.replace(/\D/g, '');
+    const cleanName = data.name.trim();
+
+    const existing = this.db.personalCategories.find(c => 
+      c.name.toLowerCase() === cleanName.toLowerCase() && 
+      (!c.phone || c.phone === cleanPhone || (cleanPhone.length >= 8 && c.phone.endsWith(cleanPhone.slice(-8))))
+    );
+    if (existing) return existing;
+
+    const newCat: PersonalCategory = {
+      id: `cat_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      phone: cleanPhone,
+      name: cleanName,
+      type: data.type || 'DESPESA',
+      color: data.color || '#6366f1',
+      monthlyBudget: data.monthlyBudget ? Number(data.monthlyBudget) : undefined,
+      createdAt: new Date().toISOString()
+    };
+
+    this.db.personalCategories.push(newCat);
+    this.saveData(this.db);
+    return newCat;
+  }
+
+  public deletePersonalCategory(id: string): boolean {
+    if (!this.db.personalCategories) return false;
+    const initialLen = this.db.personalCategories.length;
+    this.db.personalCategories = this.db.personalCategories.filter(c => c.id !== id);
+    if (this.db.personalCategories.length !== initialLen) {
       this.saveData(this.db);
       return true;
     }

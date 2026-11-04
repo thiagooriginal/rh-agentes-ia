@@ -306,6 +306,16 @@ export interface PersonalTransaction {
   createdAt: string;
 }
 
+export interface PersonalCategory {
+  id: string;
+  phone: string;
+  name: string;
+  type: 'DESPESA' | 'RECEITA' | 'AMBOS';
+  color?: string;
+  monthlyBudget?: number;
+  createdAt: string;
+}
+
 export interface DatabaseSchema {
   establishments: Establishment[];
   users: User[];
@@ -325,6 +335,7 @@ export interface DatabaseSchema {
   personalNotes?: PersonalNote[];
   personalReminders?: PersonalReminder[];
   personalTransactions?: PersonalTransaction[];
+  personalCategories?: PersonalCategory[];
   globalAiPaused?: boolean;
   salonAiPaused?: boolean;
   portalAiPaused?: boolean;

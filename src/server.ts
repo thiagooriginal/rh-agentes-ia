@@ -144,6 +144,7 @@ export function createServer() {
       const period = (req.query.period as any) || 'mes';
       const finances = storage.getPersonalFinanceSummary(phone, period);
       const allTransactions = storage.getPersonalTransactions(phone, period);
+      const categories = storage.getPersonalCategories(phone);
       const tasksPending = storage.getPersonalTasks(phone, 'pendente');
       const tasksAll = storage.getPersonalTasks(phone, 'todas');
       const notes = storage.getPersonalNotes(phone);
@@ -158,6 +159,7 @@ export function createServer() {
           ...finances,
           transacoes: allTransactions
         },
+        categories,
         tasks: {
           pendentes: tasksPending,
           todas: tasksAll
@@ -245,6 +247,35 @@ export function createServer() {
 
   app.delete('/api/jarvis/reminders/:id', (req, res) => {
     const success = storage.deletePersonalReminder(req.params.id);
+    res.json({ success });
+  });
+
+  // --- CATEGORIAS PERSONALIZADAS DO JARVIS ---
+  app.get('/api/jarvis/categories', (req, res) => {
+    let phone = (req.query.phone as string || '').replace(/\D/g, '') || config.adminPhone || '5511951364159';
+    const cats = storage.getPersonalCategories(phone);
+    res.json({ success: true, categories: cats });
+  });
+
+  app.post('/api/jarvis/categories', (req, res) => {
+    try {
+      const { phone, name, type, color, monthlyBudget } = req.body;
+      if (!name) return res.status(400).json({ success: false, error: 'Nome da categoria é obrigatório.' });
+      const newCat = storage.addPersonalCategory({
+        phone: phone || config.adminPhone || '5511951364159',
+        name,
+        type,
+        color,
+        monthlyBudget
+      });
+      res.json({ success: true, category: newCat });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.delete('/api/jarvis/categories/:id', (req, res) => {
+    const success = storage.deletePersonalCategory(req.params.id);
     res.json({ success });
   });
 

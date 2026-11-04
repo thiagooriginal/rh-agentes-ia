@@ -959,6 +959,24 @@ DIRETRIZES GERAIS:
             }
           }
         }
+      },
+      {
+        name: 'jarvis_adicionar_categoria',
+        description: 'Cria uma nova categoria financeira personalizada (ex: "Cartão de Crédito", "Contas Fixas", "Petshop", "Investimentos").',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            nome: {
+              type: Type.STRING,
+              description: 'Nome da categoria (ex: Cartão de Crédito, Contas Fixas, Assinaturas)'
+            },
+            tipo: {
+              type: Type.STRING,
+              description: 'DESPESA, RECEITA ou AMBOS. Padrão: DESPESA'
+            }
+          },
+          required: ['nome']
+        }
       }
     ];
   }
@@ -1045,6 +1063,15 @@ DIRETRIZES GERAIS:
         return { sucesso: true, total: list.length, anotacoes: list };
       }
 
+      case 'jarvis_adicionar_categoria': {
+        const cat = storage.addPersonalCategory({
+          phone,
+          name: args.nome,
+          type: args.tipo?.toUpperCase() === 'RECEITA' ? 'RECEITA' : (args.tipo?.toUpperCase() === 'AMBOS' ? 'AMBOS' : 'DESPESA')
+        });
+        return { sucesso: true, categoria_criada: cat, mensagem: `Categoria "${cat.name}" criada com sucesso!` };
+      }
+
       default:
         return { sucesso: false, erro: `Função Jarvis desconhecida: ${name}` };
     }
@@ -1063,6 +1090,7 @@ DIRETRIZES GERAIS:
     const diaSemanaHoje = diasSemana[now.getDay()];
     const horaHoje = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     const nomeUsuario = userName || 'Chefe';
+    const userCategories = storage.getPersonalCategories(clientPhone).map(c => c.name).join(', ');
 
     const systemInstruction = `
 Você é o JARVIS, o Assistente Executivo e Segundo Cérebro de alta performance de ${nomeUsuario}.
@@ -1071,6 +1099,12 @@ Você opera diretamente pelo WhatsApp através de texto e mensagens de voz na co
 INFORMAÇÃO TEMPORAL ATUAL:
 - Data de hoje: ${dataHoje} (${diaSemanaHoje})
 - Horário atual: ${horaHoje}
+
+CATEGORIAS FINANCEIRAS DISPONÍVEIS:
+${userCategories}
+- Use "Cartão de Crédito" para compras/gastos no cartão de crédito/fatura.
+- Use "Contas Fixas" para contas recorrentes (aluguel, condomínio, luz, internet, água, planos).
+- Se o usuário pedir para criar uma categoria nova (ex: "cria a categoria Assinaturas"), chame 'jarvis_adicionar_categoria'.
 
 SEU PERFIL E PERSONALIDADE:
 - Tom de voz: Sofisticado, executivo, extremamente ágil, proativo e confiável. Trate o usuário com respeito cordial (ex: "${nomeUsuario}" ou "Senhor", de forma natural e moderna).
