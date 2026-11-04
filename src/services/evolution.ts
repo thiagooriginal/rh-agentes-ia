@@ -297,6 +297,40 @@ export class EvolutionService {
   }
 
   /**
+   * Baixa a mídia (áudio/imagem) da Evolution API em base64 e decodifica para Buffer
+   */
+  public async getMediaBuffer(instance: string, msgData: any): Promise<{ buffer?: Buffer; mimetype?: string }> {
+    try {
+      const url = `${this.getBaseUrl()}/chat/getBase64FromMediaMessage/${instance}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({
+          message: msgData,
+          convertToMp4: false
+        })
+      });
+
+      if (!res.ok) {
+        console.error(`[Evolution API] Erro ao obter mídia (${res.status}):`, await res.text());
+        return {};
+      }
+
+      const json = await res.json() as any;
+      const base64Str = json?.base64;
+      if (!base64Str) return {};
+
+      const clean = base64Str.replace(/^data:[^;]+;base64,/, '');
+      const buffer = Buffer.from(clean, 'base64');
+      const mimetype = json?.mimetype || msgData?.message?.audioMessage?.mimetype || 'audio/ogg; codecs=opus';
+      return { buffer, mimetype };
+    } catch (err) {
+      console.error('[Evolution API] Falha ao extrair buffer de mídia:', err);
+      return {};
+    }
+  }
+
+  /**
    * Trata mensagens recebidas pelo Webhook da Evolution API
    */
   public async handleWebhook(payload: any): Promise<void> {
@@ -337,10 +371,24 @@ export class EvolutionService {
         const msg = msgData?.message;
         if (!msg) return;
 
-        const text = msg.conversation || msg.extendedTextMessage?.text || msg.imageMessage?.caption || '';
-        if (!text || !text.trim()) return;
+        // Extrai texto ou áudio se presente
+        let trimmedText = (msg.conversation || msg.extendedTextMessage?.text || msg.imageMessage?.caption || '').trim();
+        const isAudio = Boolean(msg.audioMessage || msgData.messageType === 'audioMessage');
 
-        const trimmedText = text.trim();
+        if (isAudio && !trimmedText) {
+          console.log(`[Evolution API 🎙️ Áudio] Mensagem de voz recebida de ${cleanPhone}. Baixando da Evolution...`);
+          const { buffer, mimetype } = await this.getMediaBuffer(instanceName, msgData);
+          if (buffer && buffer.length > 0) {
+            console.log(`[Evolution API 🎙️ Áudio] Áudio recebido (${buffer.length} bytes). Transcrevendo com Gemini...`);
+            const transcription = await aiService.transcribeAudio(buffer, mimetype || 'audio/ogg');
+            if (transcription && transcription.trim()) {
+              trimmedText = transcription.trim();
+              console.log(`[Evolution API 🎙️ Transcrição Concluída]: "${trimmedText}"`);
+            }
+          }
+        }
+
+        if (!trimmedText) return;
         if (this.recentBotReplies.has(trimmedText)) return;
 
         console.log(`[Evolution API 👔 Jarvis] Atendendo mensagem pessoal (${cleanPhone}): "${trimmedText}"`);
@@ -357,11 +405,22 @@ export class EvolutionService {
       const msg = msgData?.message;
       if (!msg) return;
 
-      // Extrai texto da mensagem
-      const text = msg.conversation || msg.extendedTextMessage?.text || msg.imageMessage?.caption || '';
-      if (!text || !text.trim()) return;
+      // Extrai texto ou áudio se presente
+      let trimmedText = (msg.conversation || msg.extendedTextMessage?.text || msg.imageMessage?.caption || '').trim();
+      const isAudio = Boolean(msg.audioMessage || msgData.messageType === 'audioMessage');
 
-      const trimmedText = text.trim();
+      if (isAudio && !trimmedText) {
+        console.log(`[Evolution API 🎙️ Áudio] Mensagem de voz recebida de ${cleanPhone} no portal. Baixando da Evolution...`);
+        const { buffer, mimetype } = await this.getMediaBuffer(instanceName, msgData);
+        if (buffer && buffer.length > 0) {
+          const transcription = await aiService.transcribeAudio(buffer, mimetype || 'audio/ogg');
+          if (transcription && transcription.trim()) {
+            trimmedText = transcription.trim();
+          }
+        }
+      }
+
+      if (!trimmedText) return;
       if (this.recentBotReplies.has(trimmedText)) return;
 
       console.log(`[Evolution API 📩 Recebida em ${instanceName}] Mensagem de ${cleanPhone}: "${trimmedText}"`);
