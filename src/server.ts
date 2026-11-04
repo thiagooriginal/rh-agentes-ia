@@ -68,19 +68,44 @@ export function createServer() {
   app.get('/api/version', (_req, res) => {
     res.json({
       name: 'rh-agentes-ia',
-      version: '1.0.6',
-      builtAt: '2026-11-04T18:15:00Z',
-      commit: process.env.GIT_SHA || 'v1.0.6-jarvis-personal-assistant'
+      version: '1.0.7',
+      builtAt: '2026-11-04T18:55:00Z',
+      commit: process.env.GIT_SHA || 'v1.0.7-jarvis-evolution-integration'
     });
   });
 
-  // --- STATUS & WHATSAPP (SALÃO E PORTAL) ---
-  app.get('/api/status', (req, res) => {
+  // --- STATUS & WHATSAPP (SALÃO/JARVIS E PORTAL) ---
+  app.get('/api/status', async (req, res) => {
     const est = storage.getEstablishment();
+    let salonWhatsapp = whatsappService.getStatus();
+    let portalWhatsapp = portalWhatsAppService.getStatus();
+
+    if (evolutionService.isConfigured()) {
+      try {
+        const jarvisStatus = await evolutionService.getStatus('jarvis-pessoal');
+        salonWhatsapp = {
+          state: jarvisStatus.state,
+          phoneNumber: jarvisStatus.phoneNumber,
+          qrCodeDataUrl: jarvisStatus.qrCodeDataUrl,
+          lastUpdated: jarvisStatus.lastUpdated
+        };
+      } catch (e) {}
+
+      try {
+        const portalStatus = await evolutionService.getStatus('portal-ias');
+        portalWhatsapp = {
+          state: portalStatus.state,
+          phoneNumber: portalStatus.phoneNumber,
+          qrCodeDataUrl: portalStatus.qrCodeDataUrl,
+          lastUpdated: portalStatus.lastUpdated
+        };
+      } catch (e) {}
+    }
+
     res.json({
       establishment: est,
-      whatsapp: whatsappService.getStatus(),
-      portalWhatsapp: portalWhatsAppService.getStatus(),
+      whatsapp: salonWhatsapp,
+      portalWhatsapp: portalWhatsapp,
       hasGeminiApiKey: aiService.hasApiKey(),
       hasGoogleCalendar: googleCalendar.isAvailable(),
       isAiPaused: storage.isGlobalAiPaused(),
@@ -148,11 +173,15 @@ export function createServer() {
     res.json({ success: true, paused: false, message: 'IA do Portal das IAs reativada.' });
   });
 
-  // --- WHATSAPP SALÃO (LINHA 1) ---
+  // --- WHATSAPP JARVIS PESSOAL (LINHA 1) ---
   app.post('/api/whatsapp/connect', async (req, res) => {
     try {
+      if (evolutionService.isConfigured()) {
+        const qr = await evolutionService.getQRCode('jarvis-pessoal');
+        return res.json({ success: true, message: 'Conectando Jarvis via Evolution API...', qr });
+      }
       await whatsappService.start();
-      res.json({ success: true, message: 'Iniciando conexão com WhatsApp do Salão...' });
+      res.json({ success: true, message: 'Iniciando conexão com WhatsApp Linha 1...' });
     } catch (e: any) {
       res.status(500).json({ success: false, error: e.message });
     }
@@ -160,8 +189,12 @@ export function createServer() {
 
   app.post('/api/whatsapp/disconnect', async (req, res) => {
     try {
+      if (evolutionService.isConfigured()) {
+        await evolutionService.disconnect('jarvis-pessoal');
+        return res.json({ success: true, message: 'Sessão do Jarvis desconectada no Evolution' });
+      }
       await whatsappService.disconnect(true);
-      res.json({ success: true, message: 'Sessão do Salão desconectada com sucesso' });
+      res.json({ success: true, message: 'Sessão desconectada com sucesso' });
     } catch (e: any) {
       res.status(500).json({ success: false, error: e.message });
     }
@@ -169,6 +202,11 @@ export function createServer() {
 
   app.post('/api/whatsapp/reset', async (req, res) => {
     try {
+      if (evolutionService.isConfigured()) {
+        await evolutionService.restartInstance('jarvis-pessoal');
+        const qr = await evolutionService.getQRCode('jarvis-pessoal');
+        return res.json({ success: true, message: 'Novo QR Code do Jarvis gerado via Evolution!', qr });
+      }
       await whatsappService.resetSession();
       res.json({ success: true, message: 'Sessão reiniciada com sucesso. Novo QR code gerado!' });
     } catch (e: any) {
@@ -180,6 +218,10 @@ export function createServer() {
     try {
       const { phone } = req.body;
       if (!phone) return res.status(400).json({ success: false, error: 'Telefone é obrigatório.' });
+      if (evolutionService.isConfigured()) {
+        const code = await evolutionService.requestPairingCode(phone, 'jarvis-pessoal');
+        return res.json({ success: true, code });
+      }
       const code = await whatsappService.requestPairingCode(phone);
       res.json({ success: true, code });
     } catch (e: any) {
@@ -187,10 +229,10 @@ export function createServer() {
     }
   });
 
-  // --- WHATSAPP PORTAL DAS IAS (LINHA 2 DEDICADA - BAILEYS OU EVOLUTION API) ---
+  // --- WHATSAPP PORTAL DAS IAS (LINHA 2 DEDICADA - PORTAL-IAS) ---
   app.get('/api/portal/whatsapp/status', async (req, res) => {
     if (evolutionService.isConfigured()) {
-      const evoStatus = await evolutionService.getStatus();
+      const evoStatus = await evolutionService.getStatus('portal-ias');
       return res.json(evoStatus);
     }
     res.json(portalWhatsAppService.getStatus());
@@ -199,8 +241,8 @@ export function createServer() {
   app.post('/api/portal/whatsapp/connect', async (req, res) => {
     try {
       if (evolutionService.isConfigured()) {
-        const qr = await evolutionService.getQRCode();
-        return res.json({ success: true, message: 'Conectando via Evolution API...', qr });
+        const qr = await evolutionService.getQRCode('portal-ias');
+        return res.json({ success: true, message: 'Conectando Linha 2 via Evolution API...', qr });
       }
       await portalWhatsAppService.start();
       res.json({ success: true, message: 'Iniciando conexão com WhatsApp do Portal das IAs...' });
@@ -212,8 +254,8 @@ export function createServer() {
   app.post('/api/portal/whatsapp/disconnect', async (req, res) => {
     try {
       if (evolutionService.isConfigured()) {
-        await evolutionService.disconnect();
-        return res.json({ success: true, message: 'Sessão Evolution API desconectada' });
+        await evolutionService.disconnect('portal-ias');
+        return res.json({ success: true, message: 'Sessão Linha 2 desconectada no Evolution' });
       }
       await portalWhatsAppService.disconnect(true);
       res.json({ success: true, message: 'Sessão do Portal das IAs desconectada com sucesso' });
@@ -225,9 +267,9 @@ export function createServer() {
   app.post('/api/portal/whatsapp/reset', async (req, res) => {
     try {
       if (evolutionService.isConfigured()) {
-        await evolutionService.disconnect();
-        const qr = await evolutionService.getQRCode();
-        return res.json({ success: true, message: 'Sessão Evolution reiniciada!', qr });
+        await evolutionService.restartInstance('portal-ias');
+        const qr = await evolutionService.getQRCode('portal-ias');
+        return res.json({ success: true, message: 'Sessão Linha 2 Evolution reiniciada!', qr });
       }
       await portalWhatsAppService.resetSession();
       res.json({ success: true, message: 'Sessão do portal reiniciada com sucesso. Novo QR code gerado!' });

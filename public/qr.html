@@ -308,8 +308,12 @@
           }
         }
 
-        // Se o usuário ainda não escolheu manualmente, e a Linha 1 tiver QR pronto enquanto a 2 não tem, foca na Linha 1
+        // Se o usuário ainda não escolheu manualmente: se a Linha 2 já estiver conectada e a Linha 1 precisar conectar, foca na Linha 1 (Jarvis)
         if (!userManuallySelected) {
+          if (data.portalWhatsapp?.state === 'connected' && data.whatsapp?.state !== 'connected' && activeLine !== 'salon') {
+            switchLine('salon', false);
+            return;
+          }
           if (data.whatsapp?.qrCodeDataUrl && !data.portalWhatsapp?.qrCodeDataUrl && activeLine !== 'salon') {
             switchLine('salon', false);
             return;

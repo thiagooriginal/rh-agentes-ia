@@ -37,7 +37,7 @@ export class EvolutionService {
   /**
    * Consulta o estado atual da instância na Evolution API
    */
-  public async getStatus(): Promise<EvolutionState> {
+  public async getStatus(targetInstance?: string): Promise<EvolutionState> {
     if (!this.isConfigured()) {
       return {
         state: 'disconnected',
@@ -45,14 +45,16 @@ export class EvolutionService {
       };
     }
 
+    const instance = targetInstance || this.getInstanceName();
+
     try {
       // 1. Tenta buscar detalhes completos da instância via fetchInstances
       try {
-        const urlFetch = `${this.getBaseUrl()}/instance/fetchInstances?instanceName=${this.getInstanceName()}`;
+        const urlFetch = `${this.getBaseUrl()}/instance/fetchInstances?instanceName=${instance}`;
         const resFetch = await fetch(urlFetch, { headers: this.getHeaders() });
         if (resFetch.ok) {
           const list = (await resFetch.json()) as any;
-          const inst = Array.isArray(list) ? list.find((i: any) => i.name === this.getInstanceName()) : undefined;
+          const inst = Array.isArray(list) ? list.find((i: any) => i.name === instance) : undefined;
           if (inst) {
             const status = inst.connectionStatus;
             const phone = inst.ownerJid ? inst.ownerJid.split('@')[0]?.split(':')[0] : undefined;
@@ -70,12 +72,12 @@ export class EvolutionService {
       }
 
       // 2. Consulta connectionState da instância
-      const url = `${this.getBaseUrl()}/instance/connectionState/${this.getInstanceName()}`;
+      const url = `${this.getBaseUrl()}/instance/connectionState/${instance}`;
       const res = await fetch(url, { headers: this.getHeaders() });
       if (!res.ok) {
         if (res.status === 404) {
           // Instância não existe ainda, tenta criar
-          await this.createInstance();
+          await this.createInstance(instance);
         }
         return { state: 'disconnected', lastUpdated: new Date().toISOString() };
       }
@@ -92,7 +94,7 @@ export class EvolutionService {
         };
       } else if (state === 'connecting') {
         // Tenta obter QR Code se estiver conectando
-        const qrInfo = await this.getQRCode();
+        const qrInfo = await this.getQRCode(instance);
         if (qrInfo.qrCodeDataUrl) {
           return {
             state: 'qr_ready',
@@ -106,7 +108,7 @@ export class EvolutionService {
         return { state: 'disconnected', lastUpdated: new Date().toISOString() };
       }
     } catch (err) {
-      console.error('[Evolution API] Erro ao consultar status:', err);
+      console.error(`[Evolution API] Erro ao consultar status de ${instance}:`, err);
       return { state: 'disconnected', lastUpdated: new Date().toISOString() };
     }
   }
@@ -114,12 +116,13 @@ export class EvolutionService {
   /**
    * Cria a instância se ela não existir
    */
-  public async createInstance(): Promise<boolean> {
+  public async createInstance(targetInstance?: string): Promise<boolean> {
     if (!this.isConfigured()) return false;
+    const instance = targetInstance || this.getInstanceName();
     try {
       const url = `${this.getBaseUrl()}/instance/create`;
       const body = {
-        instanceName: this.getInstanceName(),
+        instanceName: instance,
         token: config.evolutionApiKey,
         qrcode: true,
         integration: 'WHATSAPP-BAILEYS'
@@ -129,10 +132,10 @@ export class EvolutionService {
         headers: this.getHeaders(),
         body: JSON.stringify(body)
       });
-      console.log(`[Evolution API] Criação da instância ${this.getInstanceName()}: status ${res.status}`);
+      console.log(`[Evolution API] Criação da instância ${instance}: status ${res.status}`);
       return res.ok;
     } catch (err) {
-      console.error('[Evolution API] Erro ao criar instância:', err);
+      console.error(`[Evolution API] Erro ao criar instância ${instance}:`, err);
       return false;
     }
   }
@@ -140,15 +143,16 @@ export class EvolutionService {
   /**
    * Inicia a conexão e obtém o QR Code ou Pairing Code
    */
-  public async getQRCode(): Promise<{ qrCodeDataUrl?: string; pairingCode?: string }> {
+  public async getQRCode(targetInstance?: string): Promise<{ qrCodeDataUrl?: string; pairingCode?: string }> {
     if (!this.isConfigured()) return {};
+    const instance = targetInstance || this.getInstanceName();
     try {
-      const url = `${this.getBaseUrl()}/instance/connect/${this.getInstanceName()}`;
+      const url = `${this.getBaseUrl()}/instance/connect/${instance}`;
       const res = await fetch(url, { headers: this.getHeaders() });
       if (!res.ok) {
         if (res.status === 404) {
-          await this.createInstance();
-          return this.getQRCode();
+          await this.createInstance(instance);
+          return this.getQRCode(instance);
         }
         return {};
       }
@@ -161,7 +165,7 @@ export class EvolutionService {
         pairingCode: pairingCode || undefined
       };
     } catch (err) {
-      console.error('[Evolution API] Erro ao buscar QR Code:', err);
+      console.error(`[Evolution API] Erro ao buscar QR Code para ${instance}:`, err);
       return {};
     }
   }
@@ -169,8 +173,9 @@ export class EvolutionService {
   /**
    * Solicita código de pareamento de 8 dígitos para um telefone
    */
-  public async requestPairingCode(phone: string): Promise<string> {
+  public async requestPairingCode(phone: string, targetInstance?: string): Promise<string> {
     if (!this.isConfigured()) throw new Error('Evolution API não configurada.');
+    const instance = targetInstance || this.getInstanceName();
     let clean = phone.replace(/\D/g, '');
     if ((clean.length === 10 || clean.length === 11) && !clean.startsWith('55')) {
       clean = '55' + clean;
@@ -178,14 +183,14 @@ export class EvolutionService {
 
     try {
       // Endpoint da Evolution v2 para pareamento por número
-      const url = `${this.getBaseUrl()}/instance/connect/${this.getInstanceName()}?number=${clean}`;
+      const url = `${this.getBaseUrl()}/instance/connect/${instance}?number=${clean}`;
       const res = await fetch(url, { headers: this.getHeaders() });
       const data = (await res.json()) as any;
       const code = data?.pairingCode || data?.code;
       if (!code) throw new Error(data?.message || 'Código não retornado pela Evolution API');
       return code;
     } catch (err: any) {
-      console.error('[Evolution API] Erro ao solicitar código de pareamento:', err);
+      console.error(`[Evolution API] Erro ao solicitar código de pareamento para ${instance}:`, err);
       throw err;
     }
   }
@@ -193,15 +198,16 @@ export class EvolutionService {
   /**
    * Dispara mensagem de texto via Evolution API
    */
-  public async sendMessage(phone: string, text: string): Promise<boolean> {
+  public async sendMessage(phone: string, text: string, targetInstance?: string): Promise<boolean> {
     if (!this.isConfigured()) throw new Error('Evolution API não configurada.');
+    const instance = targetInstance || this.getInstanceName();
     let clean = phone.replace(/\D/g, '');
     if ((clean.length === 10 || clean.length === 11) && !clean.startsWith('55')) {
       clean = '55' + clean;
     }
 
     try {
-      const url = `${this.getBaseUrl()}/message/sendText/${this.getInstanceName()}`;
+      const url = `${this.getBaseUrl()}/message/sendText/${instance}`;
       const body = {
         number: clean,
         text: text
@@ -214,7 +220,7 @@ export class EvolutionService {
 
       if (!res.ok) {
         const errText = await res.text();
-        console.error(`[Evolution API] Falha ao enviar para ${clean}:`, errText);
+        console.error(`[Evolution API] Falha ao enviar para ${clean} via ${instance}:`, errText);
         throw new Error(`Evolution API erro ${res.status}: ${errText}`);
       }
 
@@ -269,11 +275,24 @@ export class EvolutionService {
   /**
    * Desconecta a sessão na Evolution
    */
-  public async disconnect(): Promise<void> {
+  public async disconnect(targetInstance?: string): Promise<void> {
     if (!this.isConfigured()) return;
+    const instance = targetInstance || this.getInstanceName();
     try {
-      const url = `${this.getBaseUrl()}/instance/logout/${this.getInstanceName()}`;
+      const url = `${this.getBaseUrl()}/instance/logout/${instance}`;
       await fetch(url, { method: 'DELETE', headers: this.getHeaders() });
+    } catch (e) {}
+  }
+
+  /**
+   * Reinicia a sessão na Evolution para gerar novo QR Code
+   */
+  public async restartInstance(targetInstance?: string): Promise<void> {
+    if (!this.isConfigured()) return;
+    const instance = targetInstance || this.getInstanceName();
+    try {
+      const url = `${this.getBaseUrl()}/instance/restart/${instance}`;
+      await fetch(url, { method: 'PUT', headers: this.getHeaders() });
     } catch (e) {}
   }
 
@@ -287,6 +306,7 @@ export class EvolutionService {
         return;
       }
 
+      const instanceName = payload?.instance || this.getInstanceName();
       const msgData = payload?.data || payload;
       const key = msgData?.key;
       if (!key) return;
@@ -297,11 +317,41 @@ export class EvolutionService {
       }
 
       const cleanPhone = remoteJid.split('@')[0].split(':')[0].replace(/\D/g, '');
-      const evoStatus = await this.getStatus();
+      const evoStatus = await this.getStatus(instanceName);
       const botPhone = (evoStatus.phoneNumber || '').replace(/\D/g, '');
-      const isSelf = Boolean(botPhone && (cleanPhone === botPhone || (cleanPhone.length >= 8 && cleanPhone.endsWith(botPhone.slice(-8)))));
+      const isSelf = Boolean(
+        (key.fromMe && cleanPhone === botPhone) ||
+        (botPhone && (cleanPhone === botPhone || (cleanPhone.length >= 8 && cleanPhone.endsWith(botPhone.slice(-8)))))
+      );
 
-      // Ignora mensagens enviadas pelo próprio robô, exceto se for conversa com você mesmo (self-chat)
+      // Se a mensagem veio da instância jarvis-pessoal:
+      if (instanceName === 'jarvis-pessoal') {
+        const isAdmin = config.adminPhone && (cleanPhone === config.adminPhone.replace(/\D/g, ''));
+        if (config.selfChatOnly && !isSelf && !isAdmin) {
+          // Ignora mensagens de terceiros (amigos, família, grupos) para proteger a privacidade
+          return;
+        }
+
+        if (key.fromMe && !isSelf) return;
+
+        const msg = msgData?.message;
+        if (!msg) return;
+
+        const text = msg.conversation || msg.extendedTextMessage?.text || msg.imageMessage?.caption || '';
+        if (!text || !text.trim()) return;
+
+        const trimmedText = text.trim();
+        if (this.recentBotReplies.has(trimmedText)) return;
+
+        console.log(`[Evolution API 👔 Jarvis] Atendendo mensagem pessoal (${cleanPhone}): "${trimmedText}"`);
+        const replyText = await aiService.processJarvisMessage(cleanPhone, trimmedText, msgData?.pushName || 'Chefe');
+        this.recentBotReplies.add(replyText.trim());
+        setTimeout(() => this.recentBotReplies.delete(replyText.trim()), 60000);
+        await this.sendMessage(cleanPhone, replyText, instanceName);
+        return;
+      }
+
+      // Se a mensagem veio da instância portal-ias ou outra:
       if (key.fromMe && !isSelf) return;
 
       const msg = msgData?.message;
@@ -314,13 +364,15 @@ export class EvolutionService {
       const trimmedText = text.trim();
       if (this.recentBotReplies.has(trimmedText)) return;
 
-      console.log(`[Evolution API 📩 Recebida] Mensagem de ${cleanPhone}: "${trimmedText}"`);
+      console.log(`[Evolution API 📩 Recebida em ${instanceName}] Mensagem de ${cleanPhone}: "${trimmedText}"`);
 
       // 0. Se for conversa com você mesmo (Self-Chat), aciona o Jarvis diretamente!
       if (isSelf) {
         console.log(`[Evolution API 👔 Jarvis Self-Chat] Atendendo mensagem pessoal: "${trimmedText}"`);
         const replyText = await aiService.processJarvisMessage(cleanPhone, trimmedText, msgData?.pushName || 'Chefe');
-        await this.sendMessage(cleanPhone, replyText);
+        this.recentBotReplies.add(replyText.trim());
+        setTimeout(() => this.recentBotReplies.delete(replyText.trim()), 60000);
+        await this.sendMessage(cleanPhone, replyText, instanceName);
         return;
       }
 
@@ -331,7 +383,7 @@ export class EvolutionService {
           console.log(`[Evolution API] Limite de demonstração atingido para ${demoLead.name} (${demoLead.phone}).`);
           demoService.completeDemoLead(demoLead.id);
           const finishMsg = `🌟 *Demonstração ao vivo concluída com sucesso!*\n\nVocê pôde comprovar na prática a velocidade, precisão e o atendimento humanizado do nosso colaborador digital do *RH de Agentes IA*!\n\n🚀 Para contratar e ativar este agente com um número exclusivo no seu negócio, acesse nossa vitrine ou converse com nossa equipe!`;
-          await this.sendMessage(cleanPhone, finishMsg);
+          await this.sendMessage(cleanPhone, finishMsg, instanceName);
           return;
         }
 
@@ -345,7 +397,9 @@ export class EvolutionService {
           demoLead.niche
         );
 
-        await this.sendMessage(cleanPhone, demoReply);
+        this.recentBotReplies.add(demoReply.trim());
+        setTimeout(() => this.recentBotReplies.delete(demoReply.trim()), 60000);
+        await this.sendMessage(cleanPhone, demoReply, instanceName);
         return;
       }
 
@@ -353,7 +407,9 @@ export class EvolutionService {
       if (!storage.isGlobalAiPaused() && !storage.isSalonAiPaused()) {
         const pushName = msgData?.pushName || 'Cliente';
         const replyText = await aiService.processMessage(cleanPhone, trimmedText, pushName);
-        await this.sendMessage(cleanPhone, replyText);
+        this.recentBotReplies.add(replyText.trim());
+        setTimeout(() => this.recentBotReplies.delete(replyText.trim()), 60000);
+        await this.sendMessage(cleanPhone, replyText, instanceName);
       }
     } catch (err) {
       console.error('[Evolution API Webhook Erro]:', err);
