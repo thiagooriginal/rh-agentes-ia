@@ -180,6 +180,9 @@ export class EvolutionService {
     if ((clean.length === 10 || clean.length === 11) && !clean.startsWith('55')) {
       clean = '55' + clean;
     }
+    if (clean.length > 13 && config.adminPhone) {
+      clean = config.adminPhone.replace(/\D/g, '');
+    }
 
     try {
       // Endpoint da Evolution v2 para pareamento por número
@@ -204,6 +207,9 @@ export class EvolutionService {
     let clean = phone.replace(/\D/g, '');
     if ((clean.length === 10 || clean.length === 11) && !clean.startsWith('55')) {
       clean = '55' + clean;
+    }
+    if (clean.length > 13 && config.adminPhone) {
+      clean = config.adminPhone.replace(/\D/g, '');
     }
 
     try {
@@ -345,18 +351,31 @@ export class EvolutionService {
       const key = msgData?.key;
       if (!key) return;
 
-      const remoteJid = key.remoteJid;
-      if (!remoteJid || remoteJid.includes('@g.us') || remoteJid.includes('@broadcast') || remoteJid.includes('@newsletter')) {
+      let targetJid = key.remoteJid || '';
+      // Suporte completo a multi-device e privacidade do WhatsApp (LID - Linked Identity)
+      if (targetJid.includes('@lid') && key.remoteJidAlt && !key.remoteJidAlt.includes('@lid')) {
+        targetJid = key.remoteJidAlt;
+      }
+
+      if (!targetJid || targetJid.includes('@g.us') || targetJid.includes('@broadcast') || targetJid.includes('@newsletter')) {
         return;
       }
 
-      const cleanPhone = remoteJid.split('@')[0].split(':')[0].replace(/\D/g, '');
+      let cleanPhone = targetJid.split('@')[0].split(':')[0].replace(/\D/g, '');
       const evoStatus = await this.getStatus(instanceName);
-      const botPhone = (evoStatus.phoneNumber || '').replace(/\D/g, '');
+      const botPhone = (evoStatus.phoneNumber || config.adminPhone || '').replace(/\D/g, '');
+
+      // Identifica se é conversa consigo mesmo (Self-Chat), considerando ID de telefone real ou LID do dispositivo
+      const isLid = (key.remoteJid && key.remoteJid.includes('@lid')) || targetJid.includes('@lid');
       const isSelf = Boolean(
-        (key.fromMe && cleanPhone === botPhone) ||
+        (key.fromMe && (cleanPhone === botPhone || isLid)) ||
         (botPhone && (cleanPhone === botPhone || (cleanPhone.length >= 8 && cleanPhone.endsWith(botPhone.slice(-8)))))
       );
+
+      // Garante que o telefone do usuário no Self-Chat seja o número WhatsApp canônico
+      if (isSelf && botPhone) {
+        cleanPhone = botPhone;
+      }
 
       // Se a mensagem veio da instância jarvis-pessoal:
       if (instanceName === 'jarvis-pessoal') {
