@@ -1,4 +1,4 @@
-FROM node:20-alpine AS builder
+FROM node:20-alpine
 
 WORKDIR /app
 
@@ -6,29 +6,22 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
-# Força quebra de cache no Docker
-ARG CACHEBUST=20261104_v107
+# Compila o projeto TypeScript
 COPY tsconfig.json ./
 COPY src/ ./src/
 RUN npm run build
 
-# Imagem de produção enxuta
-FROM node:20-alpine AS runner
+# Remove dependências de dev em segundos (sem re-download de rede)
+RUN npm prune --omit=dev && npm cache clean --force
 
-WORKDIR /app
-ENV NODE_ENV=production
-ENV PORT=3000
-
-COPY package*.json ./
-RUN npm ci --omit=dev
-
-# Copia build e arquivos públicos
-COPY --from=builder /app/dist ./dist
+# Copia arquivos públicos da interface
 COPY public/ ./public/
 
-# Cria pastas para persistência de dados
+# Pastas para persistência dos dados
 RUN mkdir -p /app/data /app/auth_info_baileys /app/auth_info_portal
 
+ENV NODE_ENV=production
+ENV PORT=3000
 EXPOSE 3000
 
 CMD ["node", "dist/index.js"]
