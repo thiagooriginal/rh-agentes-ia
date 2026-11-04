@@ -17,7 +17,11 @@ import {
   ChatMessage,
   FinancialSnapshot,
   PromotionCampaign,
-  DemoLead
+  DemoLead,
+  PersonalTask,
+  PersonalNote,
+  PersonalReminder,
+  PersonalTransaction
 } from '../types.js';
 
 const PILOT_ESTABLISHMENT_ID = 'est_pilot_01';
@@ -384,6 +388,10 @@ class StorageManager {
             humanInterventionFlags: parsed.humanInterventionFlags || {},
             campaigns: parsed.campaigns || [],
             demoLeads: parsed.demoLeads || [],
+            personalTasks: parsed.personalTasks || [],
+            personalNotes: parsed.personalNotes || [],
+            personalReminders: parsed.personalReminders || [],
+            personalTransactions: parsed.personalTransactions || [],
             globalAiPaused: parsed.globalAiPaused !== undefined ? parsed.globalAiPaused : true
           };
         }
@@ -408,6 +416,10 @@ class StorageManager {
       humanInterventionFlags: {},
       campaigns: [],
       demoLeads: [],
+      personalTasks: [],
+      personalNotes: [],
+      personalReminders: [],
+      personalTransactions: [],
       globalAiPaused: true
     };
 
@@ -1373,6 +1385,233 @@ class StorageManager {
     this.db.portalAiPaused = paused;
     this.saveData(this.db);
     console.log(`[Storage] 🛑 Pausa da IA do Portal atualizada para: ${paused ? 'PAUSADA ⏸️' : 'ATIVA ▶️'}`);
+  }
+
+  // ========================================================
+  // --- MÓDULO JARVIS: SEGUNDO CÉREBRO & ASSISTENTE PESSOAL ---
+  // ========================================================
+
+  // --- FINANÇAS PESSOAIS ---
+  public addPersonalTransaction(data: {
+    phone: string;
+    type: 'DESPESA' | 'RECEITA';
+    amount: number;
+    category?: string;
+    description: string;
+    date?: string;
+  }): PersonalTransaction {
+    if (!this.db.personalTransactions) this.db.personalTransactions = [];
+    const cleanPhone = data.phone.replace(/\D/g, '');
+    const cleanDate = data.date || new Date().toISOString().split('T')[0];
+    const newTx: PersonalTransaction = {
+      id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      phone: cleanPhone,
+      type: data.type,
+      amount: Math.abs(data.amount),
+      category: data.category || (data.type === 'DESPESA' ? 'Geral' : 'Receita'),
+      description: data.description.trim(),
+      date: cleanDate,
+      createdAt: new Date().toISOString()
+    };
+    this.db.personalTransactions.push(newTx);
+    this.saveData(this.db);
+    return newTx;
+  }
+
+  public getPersonalTransactions(phone: string, period: 'hoje' | 'semana' | 'mes' | 'tudo' = 'hoje'): PersonalTransaction[] {
+    if (!this.db.personalTransactions) return [];
+    const clean = phone.replace(/\D/g, '');
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+
+    return this.db.personalTransactions.filter(tx => {
+      const matchPhone = tx.phone === clean || (clean.length >= 8 && tx.phone.endsWith(clean.slice(-8)));
+      if (!matchPhone) return false;
+
+      if (period === 'tudo') return true;
+      if (period === 'hoje') return tx.date === todayStr;
+
+      const txDate = new Date(tx.date + 'T12:00:00Z');
+      const diffDays = (now.getTime() - txDate.getTime()) / (1000 * 3600 * 24);
+
+      if (period === 'semana') return diffDays >= -1 && diffDays <= 7;
+      if (period === 'mes') return diffDays >= -1 && diffDays <= 31;
+      return true;
+    });
+  }
+
+  public getPersonalFinanceSummary(phone: string, period: 'hoje' | 'semana' | 'mes' | 'tudo' = 'hoje') {
+    const list = this.getPersonalTransactions(phone, period);
+    let totalDespesas = 0;
+    let totalReceitas = 0;
+    const porCategoria: Record<string, number> = {};
+
+    for (const tx of list) {
+      if (tx.type === 'DESPESA') {
+        totalDespesas += tx.amount;
+        porCategoria[tx.category] = (porCategoria[tx.category] || 0) + tx.amount;
+      } else {
+        totalReceitas += tx.amount;
+      }
+    }
+
+    return {
+      periodo: period,
+      totalDespesas,
+      totalReceitas,
+      saldo: totalReceitas - totalDespesas,
+      totalTransacoes: list.length,
+      gastosPorCategoria: porCategoria,
+      transacoes: list.slice(-10) // últimas 10
+    };
+  }
+
+  // --- TAREFAS PESSOAIS (TO-DO) ---
+  public addPersonalTask(data: {
+    phone: string;
+    description: string;
+    dueDate?: string;
+    priority?: 'ALTA' | 'MEDIA' | 'BAIXA';
+  }): PersonalTask {
+    if (!this.db.personalTasks) this.db.personalTasks = [];
+    const cleanPhone = data.phone.replace(/\D/g, '');
+    const newTask: PersonalTask = {
+      id: `task_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      phone: cleanPhone,
+      description: data.description.trim(),
+      dueDate: data.dueDate,
+      priority: data.priority || 'MEDIA',
+      status: 'PENDENTE',
+      createdAt: new Date().toISOString()
+    };
+    this.db.personalTasks.push(newTask);
+    this.saveData(this.db);
+    return newTask;
+  }
+
+  public getPersonalTasks(phone: string, status: 'pendente' | 'concluida' | 'todas' = 'pendente'): PersonalTask[] {
+    if (!this.db.personalTasks) return [];
+    const clean = phone.replace(/\D/g, '');
+    return this.db.personalTasks.filter(t => {
+      const matchPhone = t.phone === clean || (clean.length >= 8 && t.phone.endsWith(clean.slice(-8)));
+      if (!matchPhone) return false;
+      if (status === 'todas') return true;
+      if (status === 'pendente') return t.status === 'PENDENTE';
+      if (status === 'concluida') return t.status === 'CONCLUIDA';
+      return true;
+    });
+  }
+
+  public completePersonalTask(phone: string, idOrKeyword: string): PersonalTask | null {
+    if (!this.db.personalTasks) return null;
+    const clean = phone.replace(/\D/g, '');
+    const search = idOrKeyword.toLowerCase().trim();
+
+    const task = this.db.personalTasks.find(t => {
+      const matchPhone = t.phone === clean || (clean.length >= 8 && t.phone.endsWith(clean.slice(-8)));
+      if (!matchPhone || t.status === 'CONCLUIDA') return false;
+      return t.id === idOrKeyword || t.description.toLowerCase().includes(search);
+    });
+
+    if (!task) return null;
+    task.status = 'CONCLUIDA';
+    task.completedAt = new Date().toISOString();
+    this.saveData(this.db);
+    return task;
+  }
+
+  // --- ANOTAÇÕES E IDEIAS ---
+  public addPersonalNote(data: {
+    phone: string;
+    title: string;
+    content: string;
+    tags?: string[];
+  }): PersonalNote {
+    if (!this.db.personalNotes) this.db.personalNotes = [];
+    const cleanPhone = data.phone.replace(/\D/g, '');
+    const newNote: PersonalNote = {
+      id: `note_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      phone: cleanPhone,
+      title: data.title.trim(),
+      content: data.content.trim(),
+      tags: data.tags || [],
+      createdAt: new Date().toISOString()
+    };
+    this.db.personalNotes.push(newNote);
+    this.saveData(this.db);
+    return newNote;
+  }
+
+  public getPersonalNotes(phone: string, searchTerm?: string): PersonalNote[] {
+    if (!this.db.personalNotes) return [];
+    const clean = phone.replace(/\D/g, '');
+    const term = searchTerm ? searchTerm.toLowerCase().trim() : '';
+
+    return this.db.personalNotes.filter(n => {
+      const matchPhone = n.phone === clean || (clean.length >= 8 && n.phone.endsWith(clean.slice(-8)));
+      if (!matchPhone) return false;
+      if (!term) return true;
+      return n.title.toLowerCase().includes(term) || n.content.toLowerCase().includes(term) || (n.tags && n.tags.some(tag => tag.toLowerCase().includes(term)));
+    });
+  }
+
+  // --- LEMBRETES E COMPROMISSOS ---
+  public addPersonalReminder(data: {
+    phone: string;
+    title: string;
+    reminderDate: string; // YYYY-MM-DD
+    reminderTime: string; // HH:MM
+    details?: string;
+  }): PersonalReminder {
+    if (!this.db.personalReminders) this.db.personalReminders = [];
+    const cleanPhone = data.phone.replace(/\D/g, '');
+    const newRem: PersonalReminder = {
+      id: `rem_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      phone: cleanPhone,
+      title: data.title.trim(),
+      reminderDate: data.reminderDate.trim(),
+      reminderTime: data.reminderTime.trim(),
+      details: data.details,
+      status: 'AGENDADO',
+      createdAt: new Date().toISOString()
+    };
+    this.db.personalReminders.push(newRem);
+    this.saveData(this.db);
+    return newRem;
+  }
+
+  public getPersonalReminders(phone: string, filterDate?: string): PersonalReminder[] {
+    if (!this.db.personalReminders) return [];
+    const clean = phone.replace(/\D/g, '');
+
+    return this.db.personalReminders.filter(r => {
+      const matchPhone = r.phone === clean || (clean.length >= 8 && r.phone.endsWith(clean.slice(-8)));
+      if (!matchPhone) return false;
+      if (!filterDate) return true;
+      return r.reminderDate === filterDate;
+    });
+  }
+
+  public getPendingRemindersToTrigger(): PersonalReminder[] {
+    if (!this.db.personalReminders) return [];
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const currentHourMin = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+    return this.db.personalReminders.filter(r => {
+      if (r.status !== 'AGENDADO') return false;
+      return r.reminderDate < todayStr || (r.reminderDate === todayStr && currentHourMin >= r.reminderTime);
+    });
+  }
+
+  public markReminderTriggered(id: string): void {
+    if (!this.db.personalReminders) return;
+    const rem = this.db.personalReminders.find(r => r.id === id);
+    if (rem) {
+      rem.status = 'DISPARADO';
+      rem.triggeredAt = new Date().toISOString();
+      this.saveData(this.db);
+    }
   }
 }
 

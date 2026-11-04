@@ -271,6 +271,12 @@ export class WhatsAppService {
             continue;
           }
 
+          // Se o modo exclusivo de privacidade estiver ativo, o robô só responde a conversas consigo mesmo (self-chat)
+          if (config.selfChatOnly && !isSelf && !isAdminUser) {
+            console.log(`[WhatsApp 🛡️ Modo Privado Jarvis] Mensagem de ${cleanClientPhone} ignorada para proteger a privacidade das suas conversas pessoais.`);
+            continue;
+          }
+
           const effectivePhone = isSelf ? (botPhone || resolvedPhone) : resolvedPhone;
           const effectiveName = clientName;
 
@@ -490,8 +496,14 @@ export class WhatsAppService {
               await this.sock.sendPresenceUpdate('composing', remoteJid);
             }
 
-            console.log(`[WhatsApp 👤 Salão] Processando mensagem com IA: "${trimmedMessage}"`);
-            const replyText = await aiService.processMessage(effectivePhone, trimmedMessage, effectiveName);
+            let replyText: string;
+            if (isSelf) {
+              console.log(`[WhatsApp 👔 Jarvis Self-Chat] Processando mensagem com Jarvis: "${trimmedMessage}"`);
+              replyText = await aiService.processJarvisMessage(effectivePhone, trimmedMessage, effectiveName || 'Chefe');
+            } else {
+              console.log(`[WhatsApp 👤 Salão] Processando mensagem com IA: "${trimmedMessage}"`);
+              replyText = await aiService.processMessage(effectivePhone, trimmedMessage, effectiveName);
+            }
 
             // Armazena no cache recente para não gerar auto-eco
             this.recentBotReplies.add(replyText.trim());
@@ -504,7 +516,8 @@ export class WhatsAppService {
               await this.sock.sendPresenceUpdate('paused', remoteJid);
               
               console.log(`[WhatsApp 📤 Envio] Enviando para ${remoteJid}: "${replyText.slice(0, 50)}..."`);
-              const sent = await this.sock.sendMessage(remoteJid, { text: replyText });
+              const targetJid = (isSelf || remoteJid.endsWith('@lid')) ? `${effectivePhone}@s.whatsapp.net` : remoteJid;
+              const sent = await this.sock.sendMessage(targetJid, { text: replyText });
               if (sent?.key?.id) {
                 this.sentBotMessageIds.add(sent.key.id);
                 if (this.sentBotMessageIds.size > 200) {
@@ -514,14 +527,13 @@ export class WhatsAppService {
               }
 
               // Se for self-chat e o remoteJid for @lid, garante envio duplo para sincronizar nos dois formatos
-              if (isSelf && remoteJid.endsWith('@lid')) {
+              if (isSelf && remoteJid.endsWith('@lid') && targetJid !== remoteJid) {
                 try {
-                  const pnJid = `${effectivePhone}@s.whatsapp.net`;
-                  const sentPn = await this.sock.sendMessage(pnJid, { text: replyText });
-                  if (sentPn?.key?.id) this.sentBotMessageIds.add(sentPn.key.id);
+                  const sentLid = await this.sock.sendMessage(remoteJid, { text: replyText });
+                  if (sentLid?.key?.id) this.sentBotMessageIds.add(sentLid.key.id);
                 } catch (e) {}
               }
-              console.log(`[WhatsApp] Resposta enviada com sucesso para ${remoteJid}!`);
+              console.log(`[WhatsApp] Resposta enviada com sucesso para ${targetJid}!`);
             }
           } catch (err) {
             console.error(`[WhatsApp] Erro ao responder ${cleanClientPhone}:`, err);

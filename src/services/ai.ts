@@ -786,6 +786,377 @@ DIRETRIZES GERAIS:
     console.error('[AI 🎙️ Erro] Todos os modelos de transcrição falharam.');
     return '';
   }
+
+  // ========================================================
+  // --- MÓDULO JARVIS: SEGUNDO CÉREBRO & ASSISTENTE PESSOAL ---
+  // ========================================================
+
+  private getJarvisFunctionDeclarations(): FunctionDeclaration[] {
+    return [
+      {
+        name: 'jarvis_registrar_transacao',
+        description: 'Registra uma despesa (gasto) ou receita (ganho/entrada) financeira informada pelo usuário.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            tipo: {
+              type: Type.STRING,
+              description: 'DESPESA (para saídas, compras, contas pagas) ou RECEITA (para ganhos, salários, freelas, vendas)'
+            },
+            valor: {
+              type: Type.NUMBER,
+              description: 'Valor numérico em reais (positivo, ex: 45.50)'
+            },
+            descricao: {
+              type: Type.STRING,
+              description: 'Descrição clara do que foi pago ou recebido (ex: Almoço no restaurante, Uber pro trabalho, Pagamento de freela)'
+            },
+            categoria: {
+              type: Type.STRING,
+              description: 'Categoria apropriada (ex: Alimentação, Transporte, Moradia, Lazer, Saúde, Trabalho, Educação, Outros)'
+            },
+            data: {
+              type: Type.STRING,
+              description: 'Opcional: Data da transação no formato YYYY-MM-DD. Se for hoje, pode omitir.'
+            }
+          },
+          required: ['tipo', 'valor', 'descricao']
+        }
+      },
+      {
+        name: 'jarvis_consultar_financas',
+        description: 'Consulta o resumo financeiro (total gasto, total recebido, saldo e lista de transações) do usuário.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            periodo: {
+              type: Type.STRING,
+              description: 'Período desejado: "hoje", "semana", "mes" ou "tudo". Padrão: "hoje"'
+            }
+          }
+        }
+      },
+      {
+        name: 'jarvis_adicionar_tarefa',
+        description: 'Adiciona uma nova tarefa ou afazer na lista de To-Do do usuário.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            descricao: {
+              type: Type.STRING,
+              description: 'Descrição da tarefa a ser realizada'
+            },
+            data_limite: {
+              type: Type.STRING,
+              description: 'Opcional: Prazo ou data limite no formato YYYY-MM-DD ou texto'
+            },
+            prioridade: {
+              type: Type.STRING,
+              description: 'Opcional: ALTA, MEDIA ou BAIXA'
+            }
+          },
+          required: ['descricao']
+        }
+      },
+      {
+        name: 'jarvis_listar_tarefas',
+        description: 'Lista as tarefas do usuário filtradas por status.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            status: {
+              type: Type.STRING,
+              description: 'Filtrar por: "pendente", "concluida" ou "todas". Padrão: "pendente"'
+            }
+          }
+        }
+      },
+      {
+        name: 'jarvis_concluir_tarefa',
+        description: 'Marca uma tarefa pendente como concluída.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            termo_ou_id: {
+              type: Type.STRING,
+              description: 'Palavra-chave ou ID da tarefa que foi finalizada'
+            }
+          },
+          required: ['termo_ou_id']
+        }
+      },
+      {
+        name: 'jarvis_agendar_lembrete',
+        description: 'Agenda um lembrete com data e horário para o Jarvis alertar o usuário.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            titulo: {
+              type: Type.STRING,
+              description: 'O que o usuário precisa ser lembrado (ex: Pagar o boleto da internet, Reunião com João)'
+            },
+            data: {
+              type: Type.STRING,
+              description: 'Data no formato YYYY-MM-DD (ex: 2026-11-05)'
+            },
+            hora: {
+              type: Type.STRING,
+              description: 'Horário no formato HH:MM (ex: 14:30)'
+            },
+            detalhes: {
+              type: Type.STRING,
+              description: 'Opcional: Detalhes ou observações adicionais'
+            }
+          },
+          required: ['titulo', 'data', 'hora']
+        }
+      },
+      {
+        name: 'jarvis_consultar_lembretes',
+        description: 'Consulta os lembretes e compromissos agendados.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            data: {
+              type: Type.STRING,
+              description: 'Opcional: Data específica no formato YYYY-MM-DD para consultar'
+            }
+          }
+        }
+      },
+      {
+        name: 'jarvis_salvar_anotacao',
+        description: 'Guarda uma anotação, ideia, insight ou informação importante no caderno de notas do usuário.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            titulo: {
+              type: Type.STRING,
+              description: 'Título curto que resume o assunto da nota'
+            },
+            conteudo: {
+              type: Type.STRING,
+              description: 'Conteúdo detalhado da anotação ou ideia'
+            },
+            tags: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: 'Opcional: Lista de tags ou categorias para facilitar a busca (ex: ["negocios", "ideia"])'
+            }
+          },
+          required: ['titulo', 'conteudo']
+        }
+      },
+      {
+        name: 'jarvis_buscar_anotacoes',
+        description: 'Busca nas anotações e ideias salvas por palavra-chave.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            termo_busca: {
+              type: Type.STRING,
+              description: 'Termo ou palavra-chave para filtrar as notas. Se vazio, retorna as notas recentes.'
+            }
+          }
+        }
+      }
+    ];
+  }
+
+  private async executeJarvisFunction(name: string, args: any, phone: string): Promise<any> {
+    switch (name) {
+      case 'jarvis_registrar_transacao': {
+        const tx = storage.addPersonalTransaction({
+          phone,
+          type: args.tipo?.toUpperCase() === 'RECEITA' ? 'RECEITA' : 'DESPESA',
+          amount: Number(args.valor) || 0,
+          category: args.categoria,
+          description: args.descricao,
+          date: args.data
+        });
+        const summary = storage.getPersonalFinanceSummary(phone, 'hoje');
+        return {
+          sucesso: true,
+          transacao_criada: tx,
+          saldo_dia: summary.saldo,
+          total_gasto_hoje: summary.totalDespesas,
+          total_recebido_hoje: summary.totalReceitas
+        };
+      }
+
+      case 'jarvis_consultar_financas': {
+        const period = (args.periodo || 'hoje').toLowerCase() as any;
+        const summary = storage.getPersonalFinanceSummary(phone, period);
+        return { sucesso: true, ...summary };
+      }
+
+      case 'jarvis_adicionar_tarefa': {
+        const task = storage.addPersonalTask({
+          phone,
+          description: args.descricao,
+          dueDate: args.data_limite,
+          priority: args.prioridade?.toUpperCase() as any
+        });
+        return { sucesso: true, tarefa_criada: task };
+      }
+
+      case 'jarvis_listar_tarefas': {
+        const st = (args.status || 'pendente').toLowerCase() as any;
+        const tasks = storage.getPersonalTasks(phone, st);
+        return { sucesso: true, total: tasks.length, tarefas: tasks };
+      }
+
+      case 'jarvis_concluir_tarefa': {
+        const task = storage.completePersonalTask(phone, args.termo_ou_id);
+        if (!task) {
+          return { sucesso: false, mensagem: `Nenhuma tarefa pendente encontrada com "${args.termo_ou_id}".` };
+        }
+        return { sucesso: true, tarefa_concluida: task };
+      }
+
+      case 'jarvis_agendar_lembrete': {
+        const rem = storage.addPersonalReminder({
+          phone,
+          title: args.titulo,
+          reminderDate: args.data,
+          reminderTime: args.hora,
+          details: args.detalhes
+        });
+        return { sucesso: true, lembrete_agendado: rem };
+      }
+
+      case 'jarvis_consultar_lembretes': {
+        const list = storage.getPersonalReminders(phone, args.data);
+        return { sucesso: true, total: list.length, lembretes: list };
+      }
+
+      case 'jarvis_salvar_anotacao': {
+        const note = storage.addPersonalNote({
+          phone,
+          title: args.titulo,
+          content: args.conteudo,
+          tags: args.tags
+        });
+        return { sucesso: true, anotacao_salva: note };
+      }
+
+      case 'jarvis_buscar_anotacoes': {
+        const list = storage.getPersonalNotes(phone, args.termo_busca);
+        return { sucesso: true, total: list.length, anotacoes: list };
+      }
+
+      default:
+        return { sucesso: false, erro: `Função Jarvis desconhecida: ${name}` };
+    }
+  }
+
+  public async processJarvisMessage(clientPhone: string, userMessage: string, userName?: string): Promise<string> {
+    if (!this.genAI) {
+      return '⚠️ Jarvis indisponível: Chave da API do Google Gemini não configurada.';
+    }
+
+    storage.saveConversationMessage(clientPhone, 'user', userMessage);
+
+    const now = new Date();
+    const diasSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+    const dataHoje = now.toISOString().split('T')[0];
+    const diaSemanaHoje = diasSemana[now.getDay()];
+    const horaHoje = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const nomeUsuario = userName || 'Chefe';
+
+    const systemInstruction = `
+Você é o JARVIS, o Assistente Executivo e Segundo Cérebro de alta performance de ${nomeUsuario}.
+Você opera diretamente pelo WhatsApp através de texto e mensagens de voz na conversa privada consigo mesmo (Self-Chat).
+
+INFORMAÇÃO TEMPORAL ATUAL:
+- Data de hoje: ${dataHoje} (${diaSemanaHoje})
+- Horário atual: ${horaHoje}
+
+SEU PERFIL E PERSONALIDADE:
+- Tom de voz: Sofisticado, executivo, extremamente ágil, proativo e confiável. Trate o usuário com respeito cordial (ex: "${nomeUsuario}" ou "Senhor", de forma natural e moderna).
+- Objetividade: Sempre direto ao ponto. Nunca faça textos longos ou redundantes quando uma confirmação limpa for suficiente.
+- Formatação: Use emojis elegantes (👔, 📊, 💰, ⏰, 📌, ✅, 💡) e listas formatadas em Markdown com negritos para facilitar a leitura rápida no celular.
+
+SEUS 4 PILARES DE ATUAÇÃO:
+1. 💰 FINANÇAS PESSOAIS & GASTOS:
+   - Quando o usuário disser que gastou ou recebeu (ex: "gastei 45 no almoço", "paguei 80 de conta", "recebi 500 do cliente X"):
+   - Chame 'jarvis_registrar_transacao' imediatamente.
+   - Responda confirmando o lançamento com categoria, valor e o saldo diário atualizado.
+   - Se ele perguntar "quanto gastei hoje?" ou "qual meu saldo?", chame 'jarvis_consultar_financas'.
+
+2. ✅ GERENCIAMENTO DE TAREFAS (TO-DO):
+   - Quando o usuário mandar anotar afazeres (ex: "tenho que pagar o fornecedor amanhã", "anota aí: enviar contrato"):
+   - Chame 'jarvis_adicionar_tarefa'.
+   - Se ele perguntar "o que tenho pendente?", chame 'jarvis_listar_tarefas' e apresente em lista organizada.
+   - Quando ele avisar que terminou ("concluí o contrato"), chame 'jarvis_concluir_tarefa'.
+
+3. ⏰ LEMBRETES & COMPROMISSOS:
+   - Quando ele pedir para lembrar de algo ("me lembra amanhã às 14h de..."):
+   - Chame 'jarvis_agendar_lembrete' calculando a data e horário corretos baseando-se na data/hora de hoje (${dataHoje} ${horaHoje}).
+   - Se ele perguntar a programação, chame 'jarvis_consultar_lembretes'.
+
+4. 📝 ANOTAÇÕES, IDEIAS & INSIGHTS:
+   - Quando ele mandar ideias, reflexões ou notas ("anota essa ideia...", "guarda essa informação..."):
+   - Chame 'jarvis_salvar_anotacao' com um título conciso e o conteúdo completo.
+   - Para recuperar, chame 'jarvis_buscar_anotacoes'.
+
+REGRAS ESSENCIAIS:
+- Se uma mensagem contiver múltiplos itens (ex: "gastei 30 no almoço e me lembra amanhã às 15h de ligar pro banco"), processe AMBOS chamando as respectivas ferramentas!
+- Sempre que executar uma ação, confirme com clareza o que foi registrado.
+`.trim();
+
+    const history = storage.getConversationHistory(clientPhone);
+    const previousTurns = history.slice(0, -1).slice(-10).map(msg => ({
+      role: msg.sender === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }]
+    }));
+
+    const tools = [{
+      functionDeclarations: this.getJarvisFunctionDeclarations()
+    }];
+
+    const modelsToTry = ['gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-2.5-flash'];
+    let activeChat: any = null;
+    let response: any = null;
+
+    for (const model of modelsToTry) {
+      try {
+        activeChat = this.genAI.chats.create({
+          model,
+          history: previousTurns,
+          config: { systemInstruction, tools }
+        });
+        response = await activeChat.sendMessage({ message: userMessage });
+        break;
+      } catch (err: any) {
+        console.warn(`[Jarvis AI] Modelo ${model} falhou:`, err?.message);
+      }
+    }
+
+    if (!response || !activeChat) {
+      return '⚠️ Jarvis: Não foi possível processar seu comando neste momento. Tente novamente em instantes.';
+    }
+
+    let iterations = 0;
+    while (response.functionCalls && response.functionCalls.length > 0 && iterations < 5) {
+      iterations++;
+      const call = response.functionCalls[0];
+      const result = await this.executeJarvisFunction(call.name || '', call.args, clientPhone);
+
+      response = await activeChat.sendMessage({
+        message: [{
+          functionResponse: {
+            name: call.name || '',
+            response: result
+          }
+        }]
+      });
+    }
+
+    const replyText = response.text || 'Comando registrado com sucesso, Chefe! 👔✅';
+    storage.saveConversationMessage(clientPhone, 'assistant', replyText);
+    return replyText;
+  }
 }
 
 export const aiService = new AIService();

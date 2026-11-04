@@ -22,4 +22,6 @@ export const config = {
   evolutionApiUrl: (process.env.EVOLUTION_API_URL || '').replace(/\/$/, ''),
   evolutionApiKey: process.env.EVOLUTION_API_KEY || '',
   evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME || 'portal-ias',
+  selfChatOnly: process.env.SELF_CHAT_ONLY === 'false' ? false : true,
+  assistantName: process.env.ASSISTANT_NAME || 'Jarvis',
 };

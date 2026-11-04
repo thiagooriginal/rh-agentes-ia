@@ -7,7 +7,7 @@ COPY package*.json ./
 RUN npm ci
 
 # Força quebra de cache no Docker
-ARG CACHEBUST=20261020_v105
+ARG CACHEBUST=20261104_v106
 COPY tsconfig.json ./
 COPY src/ ./src/
 RUN npm run build

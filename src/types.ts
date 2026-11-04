@@ -263,6 +263,49 @@ export interface PromotionCampaign {
   completedAt?: string;
 }
 
+export interface PersonalTask {
+  id: string;
+  phone: string;
+  description: string;
+  dueDate?: string; // YYYY-MM-DD
+  priority?: 'ALTA' | 'MEDIA' | 'BAIXA';
+  status: 'PENDENTE' | 'CONCLUIDA';
+  createdAt: string;
+  completedAt?: string;
+}
+
+export interface PersonalNote {
+  id: string;
+  phone: string;
+  title: string;
+  content: string;
+  tags?: string[];
+  createdAt: string;
+}
+
+export interface PersonalReminder {
+  id: string;
+  phone: string;
+  title: string;
+  reminderDate: string; // YYYY-MM-DD
+  reminderTime: string; // HH:MM
+  details?: string;
+  status: 'AGENDADO' | 'DISPARADO';
+  createdAt: string;
+  triggeredAt?: string;
+}
+
+export interface PersonalTransaction {
+  id: string;
+  phone: string;
+  type: 'DESPESA' | 'RECEITA';
+  amount: number;
+  category: string;
+  description: string;
+  date: string; // YYYY-MM-DD
+  createdAt: string;
+}
+
 export interface DatabaseSchema {
   establishments: Establishment[];
   users: User[];
@@ -278,6 +321,10 @@ export interface DatabaseSchema {
   humanInterventionFlags: Record<string, boolean>; // telefone -> true se humano assumiu
   campaigns?: PromotionCampaign[];
   demoLeads?: DemoLead[];
+  personalTasks?: PersonalTask[];
+  personalNotes?: PersonalNote[];
+  personalReminders?: PersonalReminder[];
+  personalTransactions?: PersonalTransaction[];
   globalAiPaused?: boolean;
   salonAiPaused?: boolean;
   portalAiPaused?: boolean;

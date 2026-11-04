@@ -68,9 +68,9 @@ export function createServer() {
   app.get('/api/version', (_req, res) => {
     res.json({
       name: 'rh-agentes-ia',
-      version: '1.0.5',
-      builtAt: '2026-10-20T21:00:00Z',
-      commit: process.env.GIT_SHA || 'v1.0.5-evolution-release'
+      version: '1.0.6',
+      builtAt: '2026-11-04T18:15:00Z',
+      commit: process.env.GIT_SHA || 'v1.0.6-jarvis-personal-assistant'
     });
   });
 
@@ -86,6 +86,24 @@ export function createServer() {
       isAiPaused: storage.isGlobalAiPaused(),
       isSalonAiPaused: storage.isSalonAiPaused(),
       isPortalAiPaused: storage.isPortalAiPaused()
+    });
+  });
+
+  // --- MÓDULO JARVIS API (CONSULTAS DE SEGUNDO CÉREBRO) ---
+  app.get('/api/jarvis/summary', (req, res) => {
+    const phone = (req.query.phone as string || '').replace(/\D/g, '');
+    const finances = storage.getPersonalFinanceSummary(phone, 'hoje');
+    const tasks = storage.getPersonalTasks(phone, 'pendente');
+    const notes = storage.getPersonalNotes(phone);
+    const reminders = storage.getPersonalReminders(phone);
+
+    res.json({
+      success: true,
+      phone,
+      finances,
+      tasks,
+      notes,
+      reminders
     });
   });
 

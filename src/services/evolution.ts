@@ -291,15 +291,19 @@ export class EvolutionService {
       const key = msgData?.key;
       if (!key) return;
 
-      // Ignora mensagens enviadas pelo próprio robô
-      if (key.fromMe) return;
-
       const remoteJid = key.remoteJid;
       if (!remoteJid || remoteJid.includes('@g.us') || remoteJid.includes('@broadcast') || remoteJid.includes('@newsletter')) {
         return;
       }
 
       const cleanPhone = remoteJid.split('@')[0].split(':')[0].replace(/\D/g, '');
+      const evoStatus = await this.getStatus();
+      const botPhone = (evoStatus.phoneNumber || '').replace(/\D/g, '');
+      const isSelf = Boolean(botPhone && (cleanPhone === botPhone || (cleanPhone.length >= 8 && cleanPhone.endsWith(botPhone.slice(-8)))));
+
+      // Ignora mensagens enviadas pelo próprio robô, exceto se for conversa com você mesmo (self-chat)
+      if (key.fromMe && !isSelf) return;
+
       const msg = msgData?.message;
       if (!msg) return;
 
@@ -311,6 +315,14 @@ export class EvolutionService {
       if (this.recentBotReplies.has(trimmedText)) return;
 
       console.log(`[Evolution API 📩 Recebida] Mensagem de ${cleanPhone}: "${trimmedText}"`);
+
+      // 0. Se for conversa com você mesmo (Self-Chat), aciona o Jarvis diretamente!
+      if (isSelf) {
+        console.log(`[Evolution API 👔 Jarvis Self-Chat] Atendendo mensagem pessoal: "${trimmedText}"`);
+        const replyText = await aiService.processJarvisMessage(cleanPhone, trimmedText, msgData?.pushName || 'Chefe');
+        await this.sendMessage(cleanPhone, replyText);
+        return;
+      }
 
       // 1. Verifica se há demonstração de lead ativa da Vitrine
       let demoLead = demoService.getActiveLead(cleanPhone);

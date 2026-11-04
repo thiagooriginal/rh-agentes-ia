@@ -1,5 +1,6 @@
 import { storage } from '../db/storage.js';
 import { whatsappService } from './whatsapp.js';
+import { evolutionService } from './evolution.js';
 
 export class SchedulerService {
   private timer: NodeJS.Timeout | null = null;
@@ -92,6 +93,25 @@ export class SchedulerService {
 
       // --- 4. RECORRÊNCIA DE DESPESAS ---
       this.checkRecurringExpenses(establishment.id);
+
+      // --- 5. LEMBRETES PESSOAIS DO JARVIS ---
+      const pendingReminders = storage.getPendingRemindersToTrigger();
+      for (const rem of pendingReminders) {
+        console.log(`[Scheduler ⏰ Jarvis] Disparando lembrete pessoal para ${rem.phone}: "${rem.title}"`);
+        const reminderText = `⏰ *[LEMBRETE DO JARVIS]*\n\n📌 *Compromisso:* ${rem.title}\n🗓️ *Horário:* ${rem.reminderDate} às ${rem.reminderTime}${rem.details ? `\n📝 *Detalhes:* ${rem.details}` : ''}\n\n_Aviso automático do seu Assistente Pessoal! 👔🚀_`;
+        
+        try {
+          if (whatsappService.isConnected()) {
+            await whatsappService.sendMessageToClient(rem.phone, reminderText);
+          } else if (evolutionService.isConfigured()) {
+            await evolutionService.sendMessage(rem.phone, reminderText);
+          }
+        } catch (e) {
+          console.error('[Scheduler ⏰ Erro envio lembrete Jarvis]:', e);
+        }
+
+        storage.markReminderTriggered(rem.id);
+      }
 
     } catch (err) {
       console.error('[Scheduler] Erro ao executar rotinas automáticas:', err);

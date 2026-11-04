@@ -49,7 +49,7 @@
         <span id="tabPortalText">🍕 Linha 2 (Portal IAs)</span>
       </button>
       <button onclick="switchLine('salon', true)" id="tabSalon" class="py-2.5 px-3 rounded-xl text-xs font-medium transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-white">
-        <span id="tabSalonText">💇‍♀️ Linha 1 (Salão)</span>
+        <span id="tabSalonText">👔 Linha 1 (Jarvis Pessoal)</span>
       </button>
     </div>
 
@@ -270,9 +270,9 @@
       } else {
         tabSalon.className = 'py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 bg-purple-600 text-white shadow-lg shadow-purple-600/30';
         tabPortal.className = 'py-2.5 px-3 rounded-xl text-xs font-medium transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-white';
-        lineIcon.textContent = '💇‍♀️';
-        lineTitle.textContent = 'Salão & Estética (Linha 1)';
-        lineDesc.textContent = 'Recepcionista Sofia & agendamentos no Google Calendar';
+        lineIcon.textContent = '👔';
+        lineTitle.textContent = 'Jarvis (Assistente Pessoal & Executivo)';
+        lineDesc.textContent = 'Conecte seu WhatsApp: converse consigo mesmo no chat "Você" para gerenciar finanças, tarefas e notas!';
       }
 
       checkStatus();
@@ -290,11 +290,11 @@
 
         if (tabSalonText && data.whatsapp) {
           if (data.whatsapp.state === 'connected') {
-            tabSalonText.innerHTML = '💇‍♀️ Linha 1 <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full ml-1">Conectado</span>';
+            tabSalonText.innerHTML = '👔 Linha 1 <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full ml-1">Conectado</span>';
           } else if (data.whatsapp.qrCodeDataUrl) {
-            tabSalonText.innerHTML = '💇‍♀️ Linha 1 <span class="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-full ml-1 animate-pulse">QR Pronto</span>';
+            tabSalonText.innerHTML = '👔 Linha 1 <span class="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-full ml-1 animate-pulse">QR Pronto</span>';
           } else {
-            tabSalonText.textContent = '💇‍♀️ Linha 1 (Salão)';
+            tabSalonText.textContent = '👔 Linha 1 (Jarvis Pessoal)';
           }
         }
 
