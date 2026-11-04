@@ -114,10 +114,11 @@ export function createServer() {
     });
   });
 
-  // --- MÓDULO JARVIS API (CONSULTAS DE SEGUNDO CÉREBRO) ---
+  // --- MÓDULO JARVIS API (CONSULTAS E GESTÃO DO SEGUNDO CÉREBRO) ---
   app.get('/api/jarvis/summary', (req, res) => {
     const phone = (req.query.phone as string || '').replace(/\D/g, '');
-    const finances = storage.getPersonalFinanceSummary(phone, 'hoje');
+    const period = (req.query.period as any) || 'hoje';
+    const finances = storage.getPersonalFinanceSummary(phone, period);
     const tasks = storage.getPersonalTasks(phone, 'pendente');
     const notes = storage.getPersonalNotes(phone);
     const reminders = storage.getPersonalReminders(phone);
@@ -130,6 +131,121 @@ export function createServer() {
       notes,
       reminders
     });
+  });
+
+  app.get('/api/jarvis/dashboard', async (req, res) => {
+    try {
+      let phone = (req.query.phone as string || '').replace(/\D/g, '');
+      if (!phone && evolutionService.isConfigured()) {
+        const evoStatus = await evolutionService.getStatus('jarvis-pessoal');
+        phone = (evoStatus.phoneNumber || '').replace(/\D/g, '');
+      }
+
+      const period = (req.query.period as any) || 'mes';
+      const finances = storage.getPersonalFinanceSummary(phone, period);
+      const allTransactions = storage.getPersonalTransactions(phone, period);
+      const tasksPending = storage.getPersonalTasks(phone, 'pendente');
+      const tasksAll = storage.getPersonalTasks(phone, 'todas');
+      const notes = storage.getPersonalNotes(phone);
+      const reminders = storage.getPersonalReminders(phone);
+      const jarvisStatus = evolutionService.isConfigured() ? await evolutionService.getStatus('jarvis-pessoal') : whatsappService.getStatus();
+
+      res.json({
+        success: true,
+        phone,
+        status: jarvisStatus,
+        finances: {
+          ...finances,
+          transacoes: allTransactions
+        },
+        tasks: {
+          pendentes: tasksPending,
+          todas: tasksAll
+        },
+        notes,
+        reminders
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/jarvis/transactions', (req, res) => {
+    try {
+      const { phone, type, amount, category, description, date } = req.body;
+      if (!amount || !description) {
+        return res.status(400).json({ success: false, error: 'Valor e descrição são obrigatórios.' });
+      }
+      const newTx = storage.addPersonalTransaction({
+        phone: phone || config.adminPhone || '5511951364159',
+        type: type === 'RECEITA' ? 'RECEITA' : 'DESPESA',
+        amount: Number(amount),
+        category,
+        description,
+        date
+      });
+      res.json({ success: true, transaction: newTx });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.delete('/api/jarvis/transactions/:id', (req, res) => {
+    const success = storage.deletePersonalTransaction(req.params.id);
+    res.json({ success });
+  });
+
+  app.post('/api/jarvis/tasks', (req, res) => {
+    try {
+      const { phone, description, dueDate, priority } = req.body;
+      if (!description) return res.status(400).json({ success: false, error: 'Descrição é obrigatória.' });
+      const newTask = storage.addPersonalTask({
+        phone: phone || config.adminPhone || '5511951364159',
+        description,
+        dueDate,
+        priority
+      });
+      res.json({ success: true, task: newTask });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.post('/api/jarvis/tasks/:id/toggle', (req, res) => {
+    const task = storage.togglePersonalTask(req.params.id);
+    if (!task) return res.status(404).json({ success: false, error: 'Tarefa não encontrada.' });
+    res.json({ success: true, task });
+  });
+
+  app.delete('/api/jarvis/tasks/:id', (req, res) => {
+    const success = storage.deletePersonalTask(req.params.id);
+    res.json({ success });
+  });
+
+  app.post('/api/jarvis/notes', (req, res) => {
+    try {
+      const { phone, title, content, tags } = req.body;
+      if (!title || !content) return res.status(400).json({ success: false, error: 'Título e conteúdo são obrigatórios.' });
+      const newNote = storage.addPersonalNote({
+        phone: phone || config.adminPhone || '5511951364159',
+        title,
+        content,
+        tags: Array.isArray(tags) ? tags : (tags ? tags.split(',').map((t: string) => t.trim()) : [])
+      });
+      res.json({ success: true, note: newNote });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.delete('/api/jarvis/notes/:id', (req, res) => {
+    const success = storage.deletePersonalNote(req.params.id);
+    res.json({ success });
+  });
+
+  app.delete('/api/jarvis/reminders/:id', (req, res) => {
+    const success = storage.deletePersonalReminder(req.params.id);
+    res.json({ success });
   });
 
   // --- CONTROLE DE PAUSA DA IA ---
@@ -707,6 +823,14 @@ export function createServer() {
   });
   app.get('/qrcode', (req, res) => {
     res.sendFile(path.resolve(process.cwd(), 'public', 'qr.html'));
+  });
+
+  // --- ROTAS DO DASHBOARD EXECUTIVO DO JARVIS (SEGUNDO CÉREBRO) ---
+  app.get('/jarvis', (req, res) => {
+    res.sendFile(path.resolve(process.cwd(), 'public', 'jarvis.html'));
+  });
+  app.get('/dashboard', (req, res) => {
+    res.sendFile(path.resolve(process.cwd(), 'public', 'jarvis.html'));
   });
 
   return app;

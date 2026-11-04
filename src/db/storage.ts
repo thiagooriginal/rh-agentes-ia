@@ -1613,6 +1613,64 @@ class StorageManager {
       this.saveData(this.db);
     }
   }
+  public deletePersonalTransaction(id: string): boolean {
+    if (!this.db.personalTransactions) return false;
+    const initialLen = this.db.personalTransactions.length;
+    this.db.personalTransactions = this.db.personalTransactions.filter(t => t.id !== id);
+    if (this.db.personalTransactions.length !== initialLen) {
+      this.saveData(this.db);
+      return true;
+    }
+    return false;
+  }
+
+  public deletePersonalTask(id: string): boolean {
+    if (!this.db.personalTasks) return false;
+    const initialLen = this.db.personalTasks.length;
+    this.db.personalTasks = this.db.personalTasks.filter(t => t.id !== id);
+    if (this.db.personalTasks.length !== initialLen) {
+      this.saveData(this.db);
+      return true;
+    }
+    return false;
+  }
+
+  public togglePersonalTask(id: string): PersonalTask | null {
+    if (!this.db.personalTasks) return null;
+    const task = this.db.personalTasks.find(t => t.id === id);
+    if (!task) return null;
+    if (task.status === 'PENDENTE') {
+      task.status = 'CONCLUIDA';
+      task.completedAt = new Date().toISOString();
+    } else {
+      task.status = 'PENDENTE';
+      delete task.completedAt;
+    }
+    this.saveData(this.db);
+    return task;
+  }
+
+  public deletePersonalNote(id: string): boolean {
+    if (!this.db.personalNotes) return false;
+    const initialLen = this.db.personalNotes.length;
+    this.db.personalNotes = this.db.personalNotes.filter(n => n.id !== id);
+    if (this.db.personalNotes.length !== initialLen) {
+      this.saveData(this.db);
+      return true;
+    }
+    return false;
+  }
+
+  public deletePersonalReminder(id: string): boolean {
+    if (!this.db.personalReminders) return false;
+    const initialLen = this.db.personalReminders.length;
+    this.db.personalReminders = this.db.personalReminders.filter(r => r.id !== id);
+    if (this.db.personalReminders.length !== initialLen) {
+      this.saveData(this.db);
+      return true;
+    }
+    return false;
+  }
 }
 
 export const storage = new StorageManager();
