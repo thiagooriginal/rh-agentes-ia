@@ -837,6 +837,19 @@ DIRETRIZES GERAIS:
         }
       },
       {
+        name: 'jarvis_consultar_fatura_cartao',
+        description: 'Consulta a fatura atual do cartão de crédito, compras acumuladas, detalhamento por item e total a pagar (ex: "quanto eu tenho de cartão pra pagar no dia 15?", "qual o total da fatura?", "quanto gastei no cartão?").',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            vencimento: {
+              type: Type.STRING,
+              description: 'Opcional: dia ou data de vencimento específico (ex: "15", "dia 15", "novembro"). Se omitido, consolida a fatura total de cartão de crédito acumulada.'
+            }
+          }
+        }
+      },
+      {
         name: 'jarvis_adicionar_tarefa',
         description: 'Adiciona uma nova tarefa ou afazer na lista de To-Do do usuário.',
         parameters: {
@@ -1008,6 +1021,35 @@ DIRETRIZES GERAIS:
         return { sucesso: true, ...summary };
       }
 
+      case 'jarvis_consultar_fatura_cartao': {
+        const allTransactions = storage.getPersonalTransactions(phone, 'tudo');
+        const cardTransactions = allTransactions.filter(tx => {
+          const cat = (tx.category || '').toLowerCase();
+          const desc = (tx.description || '').toLowerCase();
+          return cat.includes('cart') || desc.includes('cart') || desc.includes('fatura') || desc.includes('vencimento');
+        });
+
+        const venc = (args.vencimento || '').toLowerCase().trim();
+        const filtered = venc
+          ? cardTransactions.filter(tx => tx.description.toLowerCase().includes(venc) || tx.date.includes(venc))
+          : cardTransactions;
+
+        const finalTxList = filtered.length > 0 ? filtered : cardTransactions;
+        const total = finalTxList.reduce((acc, tx) => acc + (tx.type === 'DESPESA' ? tx.amount : 0), 0);
+
+        return {
+          sucesso: true,
+          total_fatura: total,
+          quantidade_compras: finalTxList.length,
+          compras: finalTxList.map(t => ({
+            descricao: t.description,
+            valor: t.amount,
+            data: t.date,
+            categoria: t.category
+          }))
+        };
+      }
+
       case 'jarvis_adicionar_tarefa': {
         const task = storage.addPersonalTask({
           phone,
@@ -1117,6 +1159,8 @@ SEUS 4 PILARES DE ATUAÇÃO:
    - Chame 'jarvis_registrar_transacao' imediatamente.
    - Responda confirmando o lançamento com categoria, valor e o saldo diário atualizado.
    - Se ele perguntar "quanto gastei hoje?" ou "qual meu saldo?", chame 'jarvis_consultar_financas'.
+   - Se ele perguntar sobre CARTÃO DE CRÉDITO, FATURA, VENCIMENTO (ex: "quanto tenho de cartão pra pagar no dia 15?", "qual o total do cartão?", "quanto deu a fatura?"):
+     Chame SEMPRE 'jarvis_consultar_fatura_cartao' para obter o somatório acumulado consolidado de todos os lançamentos!
 
 2. ✅ GERENCIAMENTO DE TAREFAS (TO-DO):
    - Quando o usuário mandar anotar afazeres (ex: "tenho que pagar o fornecedor amanhã", "anota aí: enviar contrato"):
