@@ -1,6 +1,7 @@
 import { storage } from '../db/storage.js';
 import { whatsappService } from './whatsapp.js';
 import { evolutionService } from './evolution.js';
+import { getLocalDateStr, getLocalTimeStr } from '../utils/date.js';
 
 export class SchedulerService {
   private timer: NodeJS.Timeout | null = null;
@@ -29,8 +30,8 @@ export class SchedulerService {
     try {
       const establishment = storage.getEstablishment();
       const now = new Date();
-      const todayStr = now.toISOString().split('T')[0];
-      const currentHourMin = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      const todayStr = getLocalDateStr(now);
+      const currentHourMin = getLocalTimeStr(now);
 
       const appointments = storage.getAppointments({
         establishmentId: establishment.id
@@ -64,7 +65,7 @@ export class SchedulerService {
           // Se o atendimento for amanhã
           const tomorrow = new Date();
           tomorrow.setDate(tomorrow.getDate() + 1);
-          const tomorrowStr = tomorrow.toISOString().split('T')[0];
+          const tomorrowStr = getLocalDateStr(tomorrow);
 
           if (app.date === tomorrowStr) {
             console.log(`[Scheduler] Enviando lembrete de 24h para ${app.clientName}...`);
@@ -99,18 +100,28 @@ export class SchedulerService {
       for (const rem of pendingReminders) {
         console.log(`[Scheduler ⏰ Jarvis] Disparando lembrete pessoal para ${rem.phone}: "${rem.title}"`);
         const reminderText = `⏰ *[LEMBRETE DO JARVIS]*\n\n📌 *Compromisso:* ${rem.title}\n🗓️ *Horário:* ${rem.reminderDate} às ${rem.reminderTime}${rem.details ? `\n📝 *Detalhes:* ${rem.details}` : ''}\n\n_Aviso automático do seu Assistente Pessoal! 👔🚀_`;
-        
+
+        let sent = false;
         try {
           if (whatsappService.isConnected()) {
             await whatsappService.sendMessageToClient(rem.phone, reminderText);
+            sent = true;
           } else if (evolutionService.isConfigured()) {
-            await evolutionService.sendMessage(rem.phone, reminderText);
+            try {
+              await evolutionService.sendMessage(rem.phone, reminderText, 'jarvis-pessoal');
+              sent = true;
+            } catch {
+              await evolutionService.sendMessage(rem.phone, reminderText);
+              sent = true;
+            }
           }
         } catch (e) {
           console.error('[Scheduler ⏰ Erro envio lembrete Jarvis]:', e);
         }
 
-        storage.markReminderTriggered(rem.id);
+        if (sent) {
+          storage.markReminderTriggered(rem.id);
+        }
       }
 
     } catch (err) {

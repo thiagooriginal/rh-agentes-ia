@@ -14,6 +14,8 @@ export interface EvolutionState {
 export class EvolutionService {
   private recentBotReplies: Set<string> = new Set();
   private sentMessageIds: Set<string> = new Set();
+  private processedMessageIds: Set<string> = new Set();
+  private lidToPhoneCache: Map<string, string> = new Map();
 
   public isConfigured(): boolean {
     return !!(config.evolutionApiUrl && config.evolutionApiKey);
@@ -230,6 +232,17 @@ export class EvolutionService {
         throw new Error(`Evolution API erro ${res.status}: ${errText}`);
       }
 
+      try {
+        const resJson = (await res.json()) as any;
+        const sentId = resJson?.key?.id;
+        if (sentId) {
+          this.sentMessageIds.add(sentId);
+          setTimeout(() => this.sentMessageIds.delete(sentId), 120000);
+        }
+      } catch {
+        // Resposta pode não ser JSON em algumas versões
+      }
+
       this.recentBotReplies.add(text.trim());
       if (this.recentBotReplies.size > 100) {
         const first = this.recentBotReplies.values().next().value;
@@ -291,15 +304,19 @@ export class EvolutionService {
   }
 
   /**
-   * Reinicia a sessão na Evolution para gerar novo QR Code
+   * Reinicia a sessão na Evolution (ou reconecta o WebSocket sem perder o pareamento)
    */
-  public async restartInstance(targetInstance?: string): Promise<void> {
-    if (!this.isConfigured()) return;
+  public async restartInstance(targetInstance?: string): Promise<boolean> {
+    if (!this.isConfigured()) return false;
     const instance = targetInstance || this.getInstanceName();
     try {
       const url = `${this.getBaseUrl()}/instance/restart/${instance}`;
-      await fetch(url, { method: 'PUT', headers: this.getHeaders() });
-    } catch (e) {}
+      const res = await fetch(url, { method: 'POST', headers: this.getHeaders() });
+      return res.ok;
+    } catch (err) {
+      console.error(`[Evolution API] Falha ao reiniciar instância ${instance}:`, err);
+      return false;
+    }
   }
 
   /**
@@ -337,6 +354,30 @@ export class EvolutionService {
   }
 
   /**
+   * Resolve o JID real (telefone) de uma mensagem @lid consultando a Evolution API caso remoteJidAlt não venha no webhook
+   */
+  private async resolveAltJid(instance: string, messageId?: string): Promise<string | undefined> {
+    if (!this.isConfigured() || !messageId) return undefined;
+    try {
+      const url = `${this.getBaseUrl()}/chat/findMessages/${instance}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ where: { key: { id: messageId } }, limit: 1 })
+      });
+      if (!res.ok) return undefined;
+      const json = (await res.json()) as any;
+      const alt = json?.messages?.records?.[0]?.key?.remoteJidAlt;
+      if (alt && typeof alt === 'string' && !alt.includes('@lid')) {
+        return alt;
+      }
+      return undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
    * Trata mensagens recebidas pelo Webhook da Evolution API
    */
   public async handleWebhook(payload: any): Promise<void> {
@@ -351,24 +392,43 @@ export class EvolutionService {
       const key = msgData?.key;
       if (!key) return;
 
-      let targetJid = key.remoteJid || '';
-      // Suporte completo a multi-device e privacidade do WhatsApp (LID - Linked Identity)
-      if (targetJid.includes('@lid') && key.remoteJidAlt && !key.remoteJidAlt.includes('@lid')) {
-        targetJid = key.remoteJidAlt;
+      if (key.id) {
+        if (this.sentMessageIds.has(key.id) || this.processedMessageIds.has(key.id)) {
+          return;
+        }
+        this.processedMessageIds.add(key.id);
+        setTimeout(() => this.processedMessageIds.delete(key.id), 60000);
       }
 
+      let targetJid = key.remoteJid || '';
       if (!targetJid || targetJid.includes('@g.us') || targetJid.includes('@broadcast') || targetJid.includes('@newsletter')) {
         return;
+      }
+
+      // Suporte completo a multi-device e privacidade do WhatsApp (LID - Linked Identity)
+      if (targetJid.includes('@lid')) {
+        if (key.remoteJidAlt && !key.remoteJidAlt.includes('@lid')) {
+          this.lidToPhoneCache.set(targetJid, key.remoteJidAlt);
+          targetJid = key.remoteJidAlt;
+        } else if (this.lidToPhoneCache.has(targetJid)) {
+          targetJid = this.lidToPhoneCache.get(targetJid)!;
+        } else {
+          const resolvedAlt = await this.resolveAltJid(instanceName, key.id);
+          if (resolvedAlt) {
+            this.lidToPhoneCache.set(targetJid, resolvedAlt);
+            targetJid = resolvedAlt;
+          }
+        }
       }
 
       let cleanPhone = targetJid.split('@')[0].split(':')[0].replace(/\D/g, '');
       const evoStatus = await this.getStatus(instanceName);
       const botPhone = (evoStatus.phoneNumber || config.adminPhone || '').replace(/\D/g, '');
 
-      // Identifica se é conversa consigo mesmo (Self-Chat), considerando ID de telefone real ou LID do dispositivo
-      const isLid = (key.remoteJid && key.remoteJid.includes('@lid')) || targetJid.includes('@lid');
+      // Só trata como @lid de self-chat se ainda não foi resolvido para um telefone distinto
+      const isUnresolvedLid = targetJid.includes('@lid');
       const isSelf = Boolean(
-        (key.fromMe && (cleanPhone === botPhone || isLid)) ||
+        (key.fromMe && (cleanPhone === botPhone || (isUnresolvedLid && msgData?.pushName === 'Você'))) ||
         (botPhone && (cleanPhone === botPhone || (cleanPhone.length >= 8 && cleanPhone.endsWith(botPhone.slice(-8)))))
       );
 

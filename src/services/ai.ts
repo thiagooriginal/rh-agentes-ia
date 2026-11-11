@@ -6,6 +6,7 @@ import { campaignService } from './campaign.js';
 import { demoService } from './demo.js';
 import { DemoNiche } from '../types.js';
 import { geocodingService } from './geocoding.js';
+import { getLocalDateStr, getLocalTimeStr, getLocalWeekdayName } from '../utils/date.js';
 
 export class AIService {
   private genAI: GoogleGenAI | null = null;
@@ -500,10 +501,9 @@ export class AIService {
       storage.saveConversationMessage(clientPhone, 'user', userMessage);
 
       const now = new Date();
-      const diasSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
-      const dataHoje = now.toISOString().split('T')[0];
-      const diaSemanaHoje = diasSemana[now.getDay()];
-      const horaHoje = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      const dataHoje = getLocalDateStr(now);
+      const diaSemanaHoje = getLocalWeekdayName(now);
+      const horaHoje = getLocalTimeStr(now);
 
       const adminPhone = (establishment.adminNotificationPhone || config.adminPhone || '').replace(/\D/g, '');
       const cleanSender = clientPhone.replace(/\D/g, '');
@@ -1127,10 +1127,9 @@ DIRETRIZES GERAIS:
     storage.saveConversationMessage(clientPhone, 'user', userMessage);
 
     const now = new Date();
-    const diasSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
-    const dataHoje = now.toISOString().split('T')[0];
-    const diaSemanaHoje = diasSemana[now.getDay()];
-    const horaHoje = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const dataHoje = getLocalDateStr(now);
+    const diaSemanaHoje = getLocalWeekdayName(now);
+    const horaHoje = getLocalTimeStr(now);
     const nomeUsuario = userName || 'Chefe';
     const userCategories = storage.getPersonalCategories(clientPhone).map(c => c.name).join(', ');
 
@@ -1193,7 +1192,7 @@ REGRAS ESSENCIAIS:
       functionDeclarations: this.getJarvisFunctionDeclarations()
     }];
 
-    const modelsToTry = ['gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-2.5-flash'];
+    const modelsToTry = ['gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.8-flash'];
     let activeChat: any = null;
     let response: any = null;
 

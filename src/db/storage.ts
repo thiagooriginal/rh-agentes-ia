@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import bcrypt from 'bcryptjs';
 import { config } from '../config.js';
+import { getLocalDateStr, getLocalTimeStr } from '../utils/date.js';
 import {
   Appointment,
   Client,
@@ -1405,7 +1406,7 @@ class StorageManager {
   }): PersonalTransaction {
     if (!this.db.personalTransactions) this.db.personalTransactions = [];
     const cleanPhone = data.phone.replace(/\D/g, '');
-    const cleanDate = data.date || new Date().toISOString().split('T')[0];
+    const cleanDate = data.date || getLocalDateStr();
     const newTx: PersonalTransaction = {
       id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       phone: cleanPhone,
@@ -1425,7 +1426,7 @@ class StorageManager {
     if (!this.db.personalTransactions) return [];
     const clean = phone.replace(/\D/g, '');
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+    const todayStr = getLocalDateStr(now);
 
     return this.db.personalTransactions.filter(tx => {
       const matchPhone = tx.phone === clean || (clean.length >= 8 && tx.phone.endsWith(clean.slice(-8)));
@@ -1598,8 +1599,8 @@ class StorageManager {
   public getPendingRemindersToTrigger(): PersonalReminder[] {
     if (!this.db.personalReminders) return [];
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const currentHourMin = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const todayStr = getLocalDateStr(now);
+    const currentHourMin = getLocalTimeStr(now);
 
     return this.db.personalReminders.filter(r => {
       if (r.status !== 'AGENDADO') return false;
