@@ -818,6 +818,10 @@ DIRETRIZES GERAIS:
             data: {
               type: Type.STRING,
               description: 'Opcional: Data da transação no formato YYYY-MM-DD. Se for hoje, pode omitir.'
+            },
+            vencimento: {
+              type: Type.STRING,
+              description: 'Opcional: dia ou data de vencimento da fatura ou conta (ex: "dia 15", "15/12/2026", "15"). Especialmente recomendado para compras no Cartão de Crédito ou Contas Fixas.'
             }
           },
           required: ['tipo', 'valor', 'descricao']
@@ -997,21 +1001,45 @@ DIRETRIZES GERAIS:
   private async executeJarvisFunction(name: string, args: any, phone: string): Promise<any> {
     switch (name) {
       case 'jarvis_registrar_transacao': {
+        const isCartao = (args.categoria || '').toLowerCase().includes('cart') ||
+                         (args.descricao || '').toLowerCase().includes('cart') ||
+                         (args.descricao || '').toLowerCase().includes('fatura');
+
+        let desc = args.descricao || '';
+        if (args.vencimento && !desc.toLowerCase().includes('vencimento')) {
+          desc = `${desc} (vencimento ${args.vencimento})`;
+        }
+
         const tx = storage.addPersonalTransaction({
           phone,
           type: args.tipo?.toUpperCase() === 'RECEITA' ? 'RECEITA' : 'DESPESA',
           amount: Number(args.valor) || 0,
-          category: args.categoria,
-          description: args.descricao,
+          category: isCartao ? 'Cartão de Crédito' : (args.categoria || 'Geral'),
+          description: desc,
+          dueDate: args.vencimento,
           date: args.data
         });
         const summary = storage.getPersonalFinanceSummary(phone, 'hoje');
+
+        let totalFaturaCartao = undefined;
+        if (isCartao) {
+          const all = storage.getPersonalTransactions(phone, 'tudo');
+          totalFaturaCartao = all
+            .filter(t => {
+              const c = (t.category || '').toLowerCase();
+              const d = (t.description || '').toLowerCase();
+              return c.includes('cart') || d.includes('cart') || d.includes('fatura');
+            })
+            .reduce((acc, t) => acc + (t.type === 'DESPESA' ? t.amount : 0), 0);
+        }
+
         return {
           sucesso: true,
           transacao_criada: tx,
           saldo_dia: summary.saldo,
           total_gasto_hoje: summary.totalDespesas,
-          total_recebido_hoje: summary.totalReceitas
+          total_recebido_hoje: summary.totalReceitas,
+          total_fatura_cartao_acumulada: totalFaturaCartao
         };
       }
 
@@ -1026,25 +1054,40 @@ DIRETRIZES GERAIS:
         const cardTransactions = allTransactions.filter(tx => {
           const cat = (tx.category || '').toLowerCase();
           const desc = (tx.description || '').toLowerCase();
-          return cat.includes('cart') || desc.includes('cart') || desc.includes('fatura') || desc.includes('vencimento');
+          const due = (tx.dueDate || '').toLowerCase();
+          return cat.includes('cart') || desc.includes('cart') || desc.includes('fatura') || due.length > 0;
         });
 
-        const venc = (args.vencimento || '').toLowerCase().trim();
-        const filtered = venc
-          ? cardTransactions.filter(tx => tx.description.toLowerCase().includes(venc) || tx.date.includes(venc))
-          : cardTransactions;
+        const rawVenc = (args.vencimento || '').toLowerCase().trim();
+        const vencDigits = rawVenc.replace(/\D/g, '');
+
+        let filtered = cardTransactions;
+        if (rawVenc) {
+          filtered = cardTransactions.filter(tx => {
+            const desc = tx.description.toLowerCase();
+            const date = tx.date;
+            const due = (tx.dueDate || '').toLowerCase();
+            if (desc.includes(rawVenc) || due.includes(rawVenc)) return true;
+            if (vencDigits && (desc.includes(vencDigits) || due.includes(vencDigits) || date.endsWith(`-${vencDigits}`))) return true;
+            return false;
+          });
+        }
 
         const finalTxList = filtered.length > 0 ? filtered : cardTransactions;
         const total = finalTxList.reduce((acc, tx) => acc + (tx.type === 'DESPESA' ? tx.amount : 0), 0);
+        const totalGeralCartao = cardTransactions.reduce((acc, tx) => acc + (tx.type === 'DESPESA' ? tx.amount : 0), 0);
 
         return {
           sucesso: true,
+          filtro_vencimento: rawVenc || 'todos',
           total_fatura: total,
+          total_geral_cartao: totalGeralCartao,
           quantidade_compras: finalTxList.length,
           compras: finalTxList.map(t => ({
             descricao: t.description,
             valor: t.amount,
             data: t.date,
+            vencimento: t.dueDate || 'Não especificado',
             categoria: t.category
           }))
         };
@@ -1154,9 +1197,9 @@ SEU PERFIL E PERSONALIDADE:
 
 SEUS 4 PILARES DE ATUAÇÃO:
 1. 💰 FINANÇAS PESSOAIS & GASTOS:
-   - Quando o usuário disser que gastou ou recebeu (ex: "gastei 45 no almoço", "paguei 80 de conta", "recebi 500 do cliente X"):
-   - Chame 'jarvis_registrar_transacao' imediatamente.
-   - Responda confirmando o lançamento com categoria, valor e o saldo diário atualizado.
+   - Quando o usuário disser que gastou ou recebeu (ex: "gastei 45 no almoço", "paguei 80 de conta", "recebi 500 do cliente X", "compra no cartão de 1200"):
+   - Chame 'jarvis_registrar_transacao' imediatamente. Se ele mencionar vencimento (ex: "vencimento dia 15", "pra pagar dia 15"), passe no parâmetro 'vencimento'.
+   - Ao confirmar um gasto no Cartão de Crédito, informe os detalhes do lançamento e mencione o total acumulado da fatura ('total_fatura_cartao_acumulada') para dar continuidade clara à soma das despesas.
    - Se ele perguntar "quanto gastei hoje?" ou "qual meu saldo?", chame 'jarvis_consultar_financas'.
    - Se ele perguntar sobre CARTÃO DE CRÉDITO, FATURA, VENCIMENTO (ex: "quanto tenho de cartão pra pagar no dia 15?", "qual o total do cartão?", "quanto deu a fatura?"):
      Chame SEMPRE 'jarvis_consultar_fatura_cartao' para obter o somatório acumulado consolidado de todos os lançamentos!

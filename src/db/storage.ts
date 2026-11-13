@@ -1402,6 +1402,7 @@ class StorageManager {
     amount: number;
     category?: string;
     description: string;
+    dueDate?: string;
     date?: string;
   }): PersonalTransaction {
     if (!this.db.personalTransactions) this.db.personalTransactions = [];
@@ -1414,6 +1415,7 @@ class StorageManager {
       amount: Math.abs(data.amount),
       category: data.category || (data.type === 'DESPESA' ? 'Geral' : 'Receita'),
       description: data.description.trim(),
+      dueDate: data.dueDate,
       date: cleanDate,
       createdAt: new Date().toISOString()
     };

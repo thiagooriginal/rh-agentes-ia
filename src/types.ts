@@ -302,6 +302,7 @@ export interface PersonalTransaction {
   amount: number;
   category: string;
   description: string;
+  dueDate?: string; // Vencimento (ex: "dia 15", "2026-12-15")
   date: string; // YYYY-MM-DD
   createdAt: string;
 }
